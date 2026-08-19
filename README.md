@@ -94,7 +94,8 @@ open tools/_report/colors.html
   이 저장소는 팬이 만든 비영리 참고 자료이며 공식과 무관합니다.
 - 한글 이름과 효과 설명: [External Item Descriptions](https://github.com/wofsauge/External-Item-Descriptions)
   한국어 번역 기여자들. 게임 공식 한국어 명칭을 따릅니다.
-- 변신 세트 구성: EID 의 `transformations.lua`
+- 변신 세트 구성: EID 의 `transformations.lua` · 세트 한글 이름은
+  [나무위키](https://namu.wiki/w/아이작의%20번제:%20리버스/시스템) 표기 참고
 - 등급·등장 장소·아이템 종류: 게임의 `items_metadata.xml` / `itempools.xml` / `items.xml`
   ([isaac-crafting](https://github.com/EliteMasterEric/isaac-crafting) 이 보관한 v1.7.9b 사본)
 - 아이템 아이콘: [isaac-save-viewer](https://github.com/Zamiell/isaac-save-viewer) (GPL-3.0)
@@ -113,8 +114,10 @@ open tools/_report/colors.html
 - 한글 이름이 없어 영문 그대로 두는 항목이 7개 있습니다
   (`Undefined`, `IBS`, `TMTRAINER`, `Missing No.`, `'M`, `1up!`, `YO LISTEN!`).
   대부분 원문이 약어이거나 고유명사라 원본 번역 팩에도 한글 표기가 없습니다.
-- **변신 이름은 음차했습니다.** EID 한국어 팩이 이 표만 영어로 남겨 둬서 직접 옮겼고,
-  영문 이름을 함께 적어 뒀습니다 (구피 / Guppy).
+- **변신 이름은 나무위키 표기를 따랐습니다.** EID 한국어 팩이 이 표만 영어로 남겨 둬서
+  [아이작의 번제: 리버스/시스템](https://namu.wiki/w/아이작의%20번제:%20리버스/시스템) 의
+  변신 세트 항목을 참고했습니다. 음차보다 뜻을 옮긴 쪽이 실제로 통하는 이름입니다
+  (Fun Guy = 버섯, Oh Crap = 똥). 영문 이름은 게임 원문 그대로 함께 적습니다.
 - **스톰피**는 아이템 2개 + 알약 1개로 3개를 채웁니다. 알약은 이 도감에 없어서
   "2개 중 3개" 로 읽히지 않게 구성을 따로 밝혀 뒀습니다.
   알약만으로 되는 **어덜트**는 아이템이 없어 아예 빠집니다.
