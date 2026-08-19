@@ -14,6 +14,8 @@
      양쪽 다 읽히는 중간 톤을 깔아 두면 테마와 상관없이 아이콘이 같은 조건에서 보인다.
      tboi.com 이 페이지 전체에 #3a3a3a 노이즈를 까는 것과 같은 이유다. */
   --tile: #3f434c;
+  /* 액티브 아이템(직접 눌러 쓰는 것)을 표시하는 색 */
+  --active: #5fb3e0;
   --cell: 64px;
   --radius: 12px;
   --bar-h: 0px;
@@ -273,6 +275,13 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   font-size: 11px;
   color: var(--dim);
 }
+/* 등급과 액티브 관련 태그는 나머지 잔정보보다 먼저 눈에 들어와야 한다. */
+.sheet .meta span.strong { font-weight: 700; }
+.sheet .meta span.active {
+  color: var(--active);
+  border-color: color-mix(in srgb, var(--active) 40%, transparent);
+  font-weight: 600;
+}
 
 .pools { margin-top: 16px; }
 .pools h3 {
@@ -368,6 +377,7 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
     --accent: #b8710f;
     --up: #1f7a3d;
     --down: #c02c31;
+    --active: #1f6f9c;
   }
   .bar { background: rgba(246, 247, 249, .92); }
   .chips button.on { background: #16181d; color: #fff; }

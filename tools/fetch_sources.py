@@ -39,9 +39,10 @@ TEXT_FILES = {
     "ko_rep.lua": f"{EID_RAW}/rep/ko_kr.lua",
     "ko_names.lua": f"{EID_RAW}/names/ko_kr.lua",
     "en_names.lua": f"{EID_RAW}/names/en_us.lua",
-    # 등급과 등장 장소는 EID 에 없다. 게임이 들고 있는 XML 이 원본이다.
+    # 등급 · 등장 장소 · 액티브/패시브 구분은 EID 에 없다. 게임이 들고 있는 XML 이 원본이다.
     "items_metadata.xml": f"{GAMEDATA_RAW}/items_metadata.xml",
     "itempools.xml": f"{GAMEDATA_RAW}/itempools.xml",
+    "items.xml": f"{GAMEDATA_RAW}/items.xml",
 }
 
 SAVE_VIEWER_TREE = "https://api.github.com/repos/Zamiell/isaac-save-viewer/git/trees/main?recursive=1"

@@ -141,15 +141,25 @@ def fit_cell(icon):
 def attach_gamedata(entries, report):
     """등급과 등장 장소를 붙인다.
 
-    둘 다 아이템에만 붙는다. 게임 XML 은 장신구 등급을 전부 0 으로 적어 두는데
+    셋 다 아이템에만 붙는다. 게임 XML 은 장신구 등급을 전부 0 으로 적어 두는데
     실제로 매긴 값이 아니라서, 그대로 보여주면 모든 장신구가 최하 등급인 것처럼 읽힌다.
     카드는 아예 해당 사항이 없다.
     """
     quality = parse_gamedata.load_quality()["item"]
     pools = parse_gamedata.load_pools()
+    types = parse_gamedata.load_types()
     for entry in entries:
         if entry["kind"] != "item":
             continue
+        info = types.get(entry["id"])
+        if info:
+            entry["type"] = info["type"]
+            if "chargetype" in info:
+                entry["chargetype"] = info["chargetype"]
+            if "charge" in info:
+                entry["charge"] = info["charge"]
+        else:
+            report["no_type"].append(f"item:{entry['id']} {entry['ko']}")
         if entry["id"] in quality:
             entry["quality"] = quality[entry["id"]]
         else:
@@ -240,7 +250,7 @@ def write_report(entries):
 
 def main():
     report = {"no_icon": [], "nameless": [], "icon_override_missing": [],
-              "no_quality": [], "no_pool": [], "color_overridden": 0}
+              "no_quality": [], "no_pool": [], "no_type": [], "color_overridden": 0}
 
     print("[1/5] 한글 텍스트 병합")
     data = parse_eid.load()
@@ -276,6 +286,9 @@ def main():
                 "color": e["color"], "hex": e["hex"],
                 **({"quality": e["quality"]} if "quality" in e else {}),
                 **({"pools": e["pools"]} if "pools" in e else {}),
+                **({"type": e["type"]} if "type" in e else {}),
+                **({"chargetype": e["chargetype"]} if "chargetype" in e else {}),
+                **({"charge": e["charge"]} if "charge" in e else {}),
             }
             for e in entries
         ],
@@ -309,6 +322,17 @@ def main():
             qualities[entry["quality"]] = qualities.get(entry["quality"], 0) + 1
     if qualities:
         print("등급 분포: " + "  ".join(f"Q{q} {qualities[q]}" for q in sorted(qualities)))
+    types = {}
+    for entry in entries:
+        if "type" in entry:
+            types[entry["type"]] = types.get(entry["type"], 0) + 1
+    if types:
+        print("종류: " + "  ".join(f"{k} {v}" for k, v in sorted(types.items()))
+              + f"  (종류 불명 {len(report['no_type'])})")
+        charged = [e for e in entries if e.get("type") == "active"]
+        rooms = sum(1 for e in charged if "charge" in e)
+        print(f"액티브 {len(charged)}개 중 방 충전 {rooms}개 · "
+              f"나머지 {len(charged) - rooms}개는 시간/특수 충전")
     with_pool = sum(1 for e in entries if e.get("pools"))
     print(f"등장 장소 있음: {with_pool}개 / 등급 없음 {len(report['no_quality'])}개"
           f" / 어느 장소에도 안 나옴 {len(report['no_pool'])}개")

@@ -12,6 +12,8 @@
   const backdropEl = $("backdrop");
 
   const KIND_KO = { item: "아이템", trinket: "장신구", card: "카드" };
+  const TYPE_KO = { active: "액티브", passive: "패시브", familiar: "패밀리어" };
+  const CHARGE_KO = { timed: "시간 충전", special: "특수 충전" };
   // 등급이 높을수록 밝은 금색으로. 게임 안에서 강한 아이템을 고를 때 쓰는 눈금이다.
   const QUALITY_HEX = ["#7b8291", "#5d8ac0", "#4fa06a", "#c9903a", "#e0c04a"];
 
@@ -49,9 +51,14 @@
     entry._en = squeeze(entry.en);
     entry._desc = squeeze(entry.desc.join(" "));
     entry._cho = squeeze(chosung(entry.ko));
-    // 등장 장소와 등급도 검색으로 걸리게 해 둔다. "천사방", "등급4", "q4" 가 모두 통한다.
+    // 등장 장소·등급·종류도 검색으로 걸리게 해 둔다.
+    // "천사방", "등급4", "q4", "액티브" 가 모두 통한다.
     const extras = (entry.pools || []).join(" ")
-      + (entry.quality === undefined ? "" : ` 등급${entry.quality} q${entry.quality}`);
+      + (entry.quality === undefined ? "" : ` 등급${entry.quality} q${entry.quality}`)
+      + (entry.type ? " " + TYPE_KO[entry.type] : "")
+      // 패밀리어도 자리로 보면 패시브라 그 말로도 찾을 수 있어야 한다.
+      + (entry.type === "familiar" ? " 패시브" : "")
+      + (entry.charge ? ` 충전${entry.charge}` : "");
     entry._extra = squeeze(extras) + squeeze(chosung(extras));
     return entry;
   }
@@ -225,30 +232,41 @@
 
     $("sheet-name").textContent = entry.ko;
     $("sheet-en").textContent = entry.en;
-    $("sheet-kind").textContent = KIND_KO[entry.kind];
-    $("sheet-id").textContent = `ID ${entry.id}`;
-    const bucket = DATA.buckets.find((b) => b.key === entry.color);
-    $("sheet-color").textContent = `${bucket.emoji} ${bucket.ko}`;
 
-    const qualityEl = $("sheet-quality");
-    qualityEl.hidden = entry.quality === undefined;
-    if (entry.quality !== undefined) {
-      qualityEl.textContent = `등급 ${entry.quality}`;
-      qualityEl.style.color = QUALITY_HEX[entry.quality];
-      qualityEl.style.borderColor = QUALITY_HEX[entry.quality] + "66";
-    }
-
-    const poolsEl = $("sheet-pools");
-    const poolList = $("sheet-pool-list");
-    poolList.textContent = "";
-    poolsEl.hidden = !entry.pools;
-    for (const name of entry.pools || []) {
+    /* 머리말 태그. 등급을 맨 앞에 두고, 그 다음이 액티브인지 패시브인지다.
+       게임 중에 알고 싶은 순서가 그렇다. */
+    const meta = $("sheet-meta");
+    meta.textContent = "";
+    const chip = (text, tone) => {
       const span = document.createElement("span");
-      span.textContent = name;
-      // 그리드 모드는 별도 모드라 눈에 덜 띄게 둔다.
-      if (name.startsWith("그리드")) span.className = "greed";
-      poolList.append(span);
+      span.textContent = text;
+      if (tone) span.className = tone;
+      meta.append(span);
+      return span;
+    };
+
+    if (entry.quality !== undefined) {
+      const span = chip(`등급 ${entry.quality}`, "strong");
+      span.style.color = QUALITY_HEX[entry.quality];
+      span.style.borderColor = QUALITY_HEX[entry.quality] + "66";
     }
+
+    if (entry.type) {
+      // 패밀리어는 패시브 자리에 붙는 동료다. 둘 다 적어야 오해가 없다.
+      const passive = entry.type !== "active";
+      chip(passive ? "패시브" : "액티브", entry.type === "active" ? "active" : null);
+      if (entry.type === "familiar") chip(TYPE_KO.familiar);
+      if (entry.charge) chip(`충전 ${entry.charge}칸`, "active");
+      else if (entry.chargetype && CHARGE_KO[entry.chargetype]) {
+        chip(CHARGE_KO[entry.chargetype], "active");
+      }
+    } else {
+      chip(KIND_KO[entry.kind]);
+    }
+
+    chip(`ID ${entry.id}`);
+    const bucket = DATA.buckets.find((b) => b.key === entry.color);
+    chip(`${bucket.emoji} ${bucket.ko}`);
 
     const ul = $("sheet-desc");
     ul.textContent = "";
@@ -263,6 +281,18 @@
       const li = document.createElement("li");
       li.textContent = "설명이 아직 없습니다.";
       ul.append(li);
+    }
+
+    const poolsEl = $("sheet-pools");
+    const poolList = $("sheet-pool-list");
+    poolList.textContent = "";
+    poolsEl.hidden = !entry.pools;
+    for (const name of entry.pools || []) {
+      const span = document.createElement("span");
+      span.textContent = name;
+      // 그리드 모드는 별도 모드라 눈에 덜 띄게 둔다.
+      if (name.startsWith("그리드")) span.className = "greed";
+      poolList.append(span);
     }
 
     sheetEl.hidden = false;

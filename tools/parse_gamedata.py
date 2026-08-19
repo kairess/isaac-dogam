@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""게임 XML 에서 아이템 등급과 등장 장소를 읽는다.
+"""게임 XML 에서 아이템 등급 · 등장 장소 · 종류와 충전량을 읽는다.
 
-등급(quality)과 아이템 풀은 EID 텍스트 팩에 없다. 게임이 resources 폴더에 들고 있는
-items_metadata.xml / itempools.xml 이 원본이고, 그 사본을 tools/_cache/text/ 에 받아 둔다.
+등급(quality), 아이템 풀, 액티브/패시브 구분은 EID 텍스트 팩에 없다.
+게임이 resources 폴더에 들고 있는 items_metadata.xml / itempools.xml / items.xml 이
+원본이고, 그 사본을 tools/_cache/text/ 에 받아 둔다.
 
 단독 실행하면 요약을 출력한다:
     python3 tools/parse_gamedata.py
@@ -39,6 +40,39 @@ def read(name):
     return path.read_text(encoding="utf-8")
 
 
+# 충전 방식. 기본값은 방을 깨서 채우는 것이고, 나머지는 XML 에 chargetype 으로 적혀 있다.
+CHARGE_KO = {
+    "room": "방",       # maxcharges 만큼 방을 깨면 찬다
+    "timed": "시간",    # 시간이 지나면 저절로 찬다
+    "special": "특수",  # 아이템마다 채우는 조건이 따로 있다
+}
+
+
+def load_types():
+    """{아이템id: {'type', 'charge', 'chargetype'}} 를 돌려준다.
+
+    게임은 아이템을 passive / active / familiar 로 나눠 적는다.
+    패밀리어는 자리로 보면 패시브지만 따라다니는 동료라 따로 표시할 값이 있어 남겨 둔다.
+    """
+    text = read("items.xml")
+    out = {}
+    for tag, attrs in re.findall(r"<(passive|active|familiar)\b([^>]*?)/?>", text):
+        found = re.search(r'\bid="(\d+)"', attrs)
+        if not found:
+            continue
+        entry = {"type": tag}
+        if tag == "active":
+            charge = re.search(r'\bmaxcharges="(\d+)"', attrs)
+            kind = re.search(r'\bchargetype="(\w+)"', attrs)
+            entry["chargetype"] = kind.group(1) if kind else "room"
+            # 방 충전일 때만 숫자가 방 개수를 뜻한다.
+            # 시간·특수 충전의 숫자는 내부 눈금이라 그대로 보여주면 오해를 부른다.
+            if entry["chargetype"] == "room" and charge and int(charge.group(1)) > 0:
+                entry["charge"] = int(charge.group(1))
+        out[int(found.group(1))] = entry
+    return out
+
+
 def load_quality():
     """{'item': {id: 등급}, 'trinket': {id: 등급}} 을 돌려준다."""
     text = read("items_metadata.xml")
@@ -72,6 +106,18 @@ def load_pools():
 def main():
     quality = load_quality()
     pools = load_pools()
+    types = load_types()
+    counts = {}
+    for entry in types.values():
+        counts[entry["type"]] = counts.get(entry["type"], 0) + 1
+    print("종류:", "  ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    charge = {}
+    for entry in types.values():
+        if entry["type"] == "active":
+            charge[entry["chargetype"]] = charge.get(entry["chargetype"], 0) + 1
+    print("액티브 충전 방식:", "  ".join(f"{CHARGE_KO[k]} {v}" for k, v in sorted(charge.items())))
+    rooms = sorted({e["charge"] for e in types.values() if "charge" in e})
+    print("방 충전 칸 수 종류:", rooms)
     for kind, table in quality.items():
         counts = {}
         for value in table.values():
