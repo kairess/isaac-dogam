@@ -2,6 +2,8 @@
 
 The Binding of Isaac 의 아이템과 장신구를 **색깔별로 묶어** 보여 주는 한글 도감입니다.
 
+**바로 보기 → https://kairess.github.io/isaac-dogam/**
+
 만든 사람 · [빵형의 개발도상국](https://www.youtube.com/@bbanghyong)
 
 [tboi.com](https://tboi.com) 은 아이템을 Rebirth / Afterbirth / Afterbirth+ / Repentance 로 나눠 놓지만,
@@ -24,7 +26,9 @@ python3 -m http.server 8000
 # http://localhost:8000
 ```
 
-GitHub Pages 에 그대로 올려도 동작합니다. (서비스워커 때문에 `file://` 로 직접 열면 오프라인 기능만 빠집니다.)
+`main` 에 올리면 [Actions 워크플로](.github/workflows/pages.yml)가 GitHub Pages 로 자동 배포합니다.
+경로를 전부 상대경로로 잡아 둬서 `/isaac-dogam/` 같은 하위 경로에서도 그대로 동작합니다.
+(서비스워커 때문에 `file://` 로 직접 열면 오프라인 기능만 빠집니다.)
 
 ## 데이터 다시 만들기
 
