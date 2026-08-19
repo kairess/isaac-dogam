@@ -15,7 +15,9 @@ The Binding of Isaac 의 아이템과 장신구를 **색깔별로 묶어** 보�
 - 12가지 색깔 묶음 · 한글 이름 · 한글 효과 설명
 - 아이템 **등급**(Q0~Q4) · **액티브/패시브** 구분 · 액티브의 **충전량**
 - **등장 장소**(보물방·악마방·천사방·상점 …)
-- 초성 검색 (`ㅅㅍㅇㅍ` → 슬픈 양파) · 장소 검색 (`천사방`) · 등급 검색 (`q4`) · 종류 검색 (`액티브`)
+- **세트(변신)** — 같은 계열 3개를 모으면 변신합니다. 세트에 뭐가 더 있는지 아이콘으로 보여 주고,
+  눌러서 바로 넘어갈 수 있습니다
+- 초성 검색 (`ㅅㅍㅇㅍ` → 슬픈 양파) · 장소 검색 (`천사방`) · 등급 검색 (`q4`) · 종류 검색 (`액티브`) · 세트 검색 (`구피`)
 - 빌드 도구 없는 정적 페이지. 홈 화면에 추가하면 **통신이 끊겨도** 열립니다.
 
 ## 실행
@@ -53,7 +55,7 @@ python3 tools/fetch_sources.py --local-icons "…/The Binding of Isaac Rebirth/r
 |---|---|
 | `tools/fetch_sources.py` | EID 한국어·영어 텍스트와 아이콘 PNG 를 `tools/_cache/` 로 수집 |
 | `tools/parse_eid.py` | Lua 텍스트 팩을 정규식으로 읽어 한글 이름·설명으로 병합 |
-| `tools/parse_gamedata.py` | 게임 XML 에서 등급 · 등장 장소 · 액티브/패시브 · 충전량을 읽음 |
+| `tools/parse_gamedata.py` | 등급 · 등장 장소 · 액티브/패시브 · 충전량 · 변신 세트를 읽음 |
 | `tools/extract_colors.py` | 아이콘에서 대표 색을 뽑아 12개 묶음으로 분류 |
 | `tools/build.py` | 위를 합쳐 `assets/data/items.json` 과 `assets/icons/sprite.webp` 생성 |
 
@@ -92,6 +94,7 @@ open tools/_report/colors.html
   이 저장소는 팬이 만든 비영리 참고 자료이며 공식과 무관합니다.
 - 한글 이름과 효과 설명: [External Item Descriptions](https://github.com/wofsauge/External-Item-Descriptions)
   한국어 번역 기여자들. 게임 공식 한국어 명칭을 따릅니다.
+- 변신 세트 구성: EID 의 `transformations.lua`
 - 등급·등장 장소·아이템 종류: 게임의 `items_metadata.xml` / `itempools.xml` / `items.xml`
   ([isaac-crafting](https://github.com/EliteMasterEric/isaac-crafting) 이 보관한 v1.7.9b 사본)
 - 아이템 아이콘: [isaac-save-viewer](https://github.com/Zamiell/isaac-save-viewer) (GPL-3.0)
@@ -110,6 +113,11 @@ open tools/_report/colors.html
 - 한글 이름이 없어 영문 그대로 두는 항목이 7개 있습니다
   (`Undefined`, `IBS`, `TMTRAINER`, `Missing No.`, `'M`, `1up!`, `YO LISTEN!`).
   대부분 원문이 약어이거나 고유명사라 원본 번역 팩에도 한글 표기가 없습니다.
+- **변신 이름은 음차했습니다.** EID 한국어 팩이 이 표만 영어로 남겨 둬서 직접 옮겼고,
+  영문 이름을 함께 적어 뒀습니다 (구피 / Guppy).
+- **스톰피**는 아이템 2개 + 알약 1개로 3개를 채웁니다. 알약은 이 도감에 없어서
+  "2개 중 3개" 로 읽히지 않게 구성을 따로 밝혀 뒀습니다.
+  알약만으로 되는 **어덜트**는 아이템이 없어 아예 빠집니다.
 - **패밀리어**(따라다니는 동료) 126개는 자리로 보면 패시브라 `패시브 · 패밀리어` 두 태그를 함께 붙였습니다.
 - 액티브 170개 중 **114개만 충전 칸 수**가 있습니다. 나머지는 시간이 지나면 차거나(21개),
   아이템마다 채우는 조건이 따로 있거나(5개), 충전이 필요 없는 것들입니다.

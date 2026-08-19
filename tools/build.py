@@ -148,6 +148,7 @@ def attach_gamedata(entries, report):
     quality = parse_gamedata.load_quality()["item"]
     pools = parse_gamedata.load_pools()
     types = parse_gamedata.load_types()
+    transforms = parse_gamedata.load_transformations()
     for entry in entries:
         if entry["kind"] != "item":
             continue
@@ -164,6 +165,9 @@ def attach_gamedata(entries, report):
             entry["quality"] = quality[entry["id"]]
         else:
             report["no_quality"].append(f"item:{entry['id']} {entry['ko']}")
+        names = transforms.get(entry["id"])
+        if names:
+            entry["sets"] = names
         places = pools.get(entry["id"])
         if places:
             entry["pools"] = places
@@ -277,6 +281,8 @@ def main():
         "generated": date.today().isoformat(),
         "sprite": {"url": "assets/icons/sprite.webp", "cell": CELL, "cols": COLS},
         "buckets": [{"key": k, "ko": ko, "emoji": e} for k, ko, e in colors.BUCKETS],
+        "setsNeeded": parse_gamedata.TRANSFORM_NEEDED,
+        "setInfo": parse_gamedata.load_transformation_stats(),
         "kinds": [{"key": "item", "ko": "아이템"}, {"key": "trinket", "ko": "장신구"},
                   {"key": "card", "ko": "카드"}],
         "entries": [
@@ -289,6 +295,7 @@ def main():
                 **({"type": e["type"]} if "type" in e else {}),
                 **({"chargetype": e["chargetype"]} if "chargetype" in e else {}),
                 **({"charge": e["charge"]} if "charge" in e else {}),
+                **({"sets": e["sets"]} if "sets" in e else {}),
             }
             for e in entries
         ],
@@ -333,6 +340,14 @@ def main():
         rooms = sum(1 for e in charged if "charge" in e)
         print(f"액티브 {len(charged)}개 중 방 충전 {rooms}개 · "
               f"나머지 {len(charged) - rooms}개는 시간/특수 충전")
+    sets = {}
+    for entry in entries:
+        for one in entry.get("sets", []):
+            sets[one["ko"]] = sets.get(one["ko"], 0) + 1
+    if sets:
+        member = sum(1 for e in entries if e.get("sets"))
+        print(f"변신 세트: {len(sets)}종 / 세트에 속한 아이템 {member}개")
+        print("  " + "  ".join(f"{k} {v}" for k, v in sorted(sets.items(), key=lambda x: -x[1])))
     with_pool = sum(1 for e in entries if e.get("pools"))
     print(f"등장 장소 있음: {with_pool}개 / 등급 없음 {len(report['no_quality'])}개"
           f" / 어느 장소에도 안 나옴 {len(report['no_pool'])}개")

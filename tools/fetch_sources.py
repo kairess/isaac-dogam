@@ -43,6 +43,8 @@ TEXT_FILES = {
     "items_metadata.xml": f"{GAMEDATA_RAW}/items_metadata.xml",
     "itempools.xml": f"{GAMEDATA_RAW}/itempools.xml",
     "items.xml": f"{GAMEDATA_RAW}/items.xml",
+    # 어떤 아이템이 어느 변신(세트)에 드는지는 EID 가 따로 표로 들고 있다.
+    "transformations.lua": f"{EID_RAW}/ab%2B/transformations.lua",
 }
 
 SAVE_VIEWER_TREE = "https://api.github.com/repos/Zamiell/isaac-save-viewer/git/trees/main?recursive=1"

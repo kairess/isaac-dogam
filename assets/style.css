@@ -16,6 +16,8 @@
   --tile: #3f434c;
   /* 액티브 아이템(직접 눌러 쓰는 것)을 표시하는 색 */
   --active: #5fb3e0;
+  /* 세트(변신) 관련 표시에 쓰는 색 */
+  --set: #c79bf0;
   --cell: 64px;
   --radius: 12px;
   --bar-h: 0px;
@@ -194,6 +196,9 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
 .grid button:focus-visible { outline: 2px solid var(--accent); }
 
 .icon {
+  /* span 이라 기본이 inline 이다. 그대로 두면 부모가 flex 가 아닌 곳에서
+     width/height 가 먹지 않아 점처럼 찌그러진다. */
+  display: block;
   width: var(--cell);
   height: var(--cell);
   background-image: url("icons/sprite.webp");
@@ -277,11 +282,48 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
 }
 /* 등급과 액티브 관련 태그는 나머지 잔정보보다 먼저 눈에 들어와야 한다. */
 .sheet .meta span.strong { font-weight: 700; }
+.sheet .meta span.set {
+  color: var(--set);
+  border-color: color-mix(in srgb, var(--set) 40%, transparent);
+  font-weight: 600;
+}
 .sheet .meta span.active {
   color: var(--active);
   border-color: color-mix(in srgb, var(--active) 40%, transparent);
   font-weight: 600;
 }
+
+/* 세트(변신) 구성원 */
+.sets { margin-top: 18px; }
+.sets > div + div { margin-top: 14px; }
+.sets h3 {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--set);
+}
+.sets h3 span {
+  color: var(--dim);
+  font-weight: 400;
+  font-size: 11px;
+}
+.set-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.set-row button {
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 0;
+}
+/* 지금 보고 있는 아이템이 세트 어디쯤인지 표시해 둔다. */
+.set-row button.self { outline: 2px solid var(--set); outline-offset: 1px; }
+.set-row button:focus-visible { outline: 2px solid var(--accent); }
+.icon.sm { --cell: 44px; border-radius: 7px; }
 
 .pools { margin-top: 16px; }
 .pools h3 {
@@ -378,6 +420,7 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
     --up: #1f7a3d;
     --down: #c02c31;
     --active: #1f6f9c;
+    --set: #7b3fb8;
   }
   .bar { background: rgba(246, 247, 249, .92); }
   .chips button.on { background: #16181d; color: #fff; }

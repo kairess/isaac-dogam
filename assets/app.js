@@ -21,6 +21,7 @@
   let cards = [];          // {entry, node, section} — 화면에 올려둔 카드
   let sections = new Map(); // 색깔 -> {el, countEl, cards}
   let state = { color: "all", kind: "all", quality: "all", query: "" };
+  let setMembers = new Map();   // 세트 이름 -> 그 세트에 드는 항목들
 
   /* ---------- 초성 검색 ----------
      한국어 사용자는 'ㅅㅍㅇㅍ' 처럼 초성만 두들겨 찾는 데 익숙하다.
@@ -58,7 +59,8 @@
       + (entry.type ? " " + TYPE_KO[entry.type] : "")
       // 패밀리어도 자리로 보면 패시브라 그 말로도 찾을 수 있어야 한다.
       + (entry.type === "familiar" ? " 패시브" : "")
-      + (entry.charge ? ` 충전${entry.charge}` : "");
+      + (entry.charge ? ` 충전${entry.charge}` : "")
+      + (entry.sets || []).map((t) => ` ${t.ko} ${t.en} 변신 세트`).join("");
     entry._extra = squeeze(extras) + squeeze(chosung(extras));
     return entry;
   }
@@ -71,6 +73,15 @@
     if (!q) return true;
     return entry._ko.includes(q) || entry._en.includes(q) || entry._cho.includes(q)
         || entry._desc.includes(q) || entry._extra.includes(q);
+  }
+
+  function groupSets() {
+    for (const entry of DATA.entries) {
+      for (const one of entry.sets || []) {
+        if (!setMembers.has(one.ko)) setMembers.set(one.ko, []);
+        setMembers.get(one.ko).push(entry);
+      }
+    }
   }
 
   /* ---------- 그리기 ---------- */
@@ -264,6 +275,8 @@
       chip(KIND_KO[entry.kind]);
     }
 
+    for (const one of entry.sets || []) chip(one.ko, "set");
+
     chip(`ID ${entry.id}`);
     const bucket = DATA.buckets.find((b) => b.key === entry.color);
     chip(`${bucket.emoji} ${bucket.ko}`);
@@ -281,6 +294,41 @@
       const li = document.createElement("li");
       li.textContent = "설명이 아직 없습니다.";
       ul.append(li);
+    }
+
+    /* 같은 세트의 아이템을 아이콘으로 늘어놓는다.
+       이름만 적어 두면 "그래서 뭘 더 먹어야 하는데" 가 남는다. */
+    const setsEl = $("sheet-sets");
+    setsEl.textContent = "";
+    setsEl.hidden = !entry.sets;
+    for (const one of entry.sets || []) {
+      const members = setMembers.get(one.ko) || [];
+      const info = (DATA.setInfo || {})[one.ko] || {};
+      const need = DATA.setsNeeded;
+      /* 스톰피처럼 아이템만으로는 수가 모자란 세트가 있다.
+         "2개 중 3개를 모으면" 이라고 적히면 말이 안 되니 구성을 밝혀 준다. */
+      const note = info.other
+        ? `${need}개를 모으면 변신 · 아이템 ${info.items}개 + 알약 ${info.other}개`
+        : `${members.length}개 중 ${need}개를 모으면 변신`;
+      const box = document.createElement("div");
+      const head = document.createElement("h3");
+      head.innerHTML = `세트 · ${one.ko} <span>${one.en} · ${note}</span>`;
+      const row = document.createElement("div");
+      row.className = "set-row";
+      for (const member of members) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.title = member.ko;
+        button.className = member.id === entry.id && member.kind === entry.kind ? "self" : "";
+        const icon = document.createElement("span");
+        icon.className = "icon sm";
+        placeIcon(icon, member);
+        button.append(icon);
+        button.addEventListener("click", () => open(member));
+        row.append(button);
+      }
+      box.append(head, row);
+      setsEl.append(box);
     }
 
     const poolsEl = $("sheet-pools");
@@ -392,6 +440,7 @@
       DATA = data;
       DATA.entries.forEach(indexEntry);
       document.documentElement.style.setProperty("--sprite-cols", DATA.sprite.cols);
+      groupSets();
       buildChips();
       buildQualityChips();
       build();

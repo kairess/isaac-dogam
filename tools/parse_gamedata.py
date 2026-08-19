@@ -40,6 +40,63 @@ def read(name):
     return path.read_text(encoding="utf-8")
 
 
+# 변신(세트) 이름. EID 한국어 팩은 이 표만 영어로 남겨 둬서 여기서 옮긴다.
+# 게임 안에서는 같은 계열 3개를 모으면 그 모습으로 바뀐다.
+TRANSFORM_KO = {
+    1: "구피", 2: "펀 가이", 3: "베엘제붑", 4: "콘조인드", 5: "스펀",
+    6: "예스 마더?", 7: "오 크랩", 8: "밥", 9: "리바이어던", 10: "세라핌",
+    11: "슈퍼 범", 12: "북웜", 13: "스파이더 베이비", 14: "어덜트", 15: "스톰피",
+}
+TRANSFORM_EN = {
+    1: "Guppy", 2: "Fun Guy", 3: "Beelzebub", 4: "Conjoined", 5: "Spun",
+    6: "Yes Mother?", 7: "Oh Crap", 8: "Bob", 9: "Leviathan", 10: "Seraphim",
+    11: "Super Bum", 12: "Bookworm", 13: "Spider Baby", 14: "Adult", 15: "Stompy",
+}
+# 변신에 필요한 개수. 모든 변신이 3개로 같다.
+TRANSFORM_NEEDED = 3
+
+
+def load_transformations():
+    """{아이템id: [{'ko','en'}, ...]} 를 돌려준다.
+
+    EID 는 "5.100.<아이템id>" 형태로 적고, 값은 변신 번호다.
+    두 변신에 걸친 아이템은 "2,15" 처럼 쉼표로 이어 적혀 있다.
+    알약으로만 되는 변신(어덜트)도 있는데 아이템이 없으니 자연히 빠진다.
+    """
+    text = read("transformations.lua")
+    out = {}
+    for item_id, value in re.findall(r'\["5\.100\.(\d+)"\]\s*=\s*"([^"]+)"', text):
+        names = []
+        for one in value.split(","):
+            one = one.strip()
+            if one.isdigit() and int(one) in TRANSFORM_KO:
+                names.append({"ko": TRANSFORM_KO[int(one)], "en": TRANSFORM_EN[int(one)]})
+        if names:
+            out[int(item_id)] = names
+    return out
+
+
+def load_transformation_stats():
+    """{한글이름: {'en', 'items', 'other'}} 를 돌려준다.
+
+    변신은 아이템만으로 채워지지 않는 것도 있다. 스톰피는 아이템 2개에 알약 1개가 붙고,
+    어덜트는 알약만으로 된다. 화면에 "2개 중 3개를 모으면" 이라고 적히지 않게
+    아이템 밖의 구성원 수도 세어 둔다.
+    """
+    text = read("transformations.lua")
+    stats = {}
+    for kind, _entry_id, value in re.findall(
+            r'\["5\.(\d+)\.(\d+)"\]\s*=\s*"([^"]+)"', text):
+        for one in value.split(","):
+            one = one.strip()
+            if not one.isdigit() or int(one) not in TRANSFORM_KO:
+                continue
+            slot = stats.setdefault(TRANSFORM_KO[int(one)],
+                                    {"en": TRANSFORM_EN[int(one)], "items": 0, "other": 0})
+            slot["items" if kind == "100" else "other"] += 1
+    return stats
+
+
 # 충전 방식. 기본값은 방을 깨서 채우는 것이고, 나머지는 XML 에 chargetype 으로 적혀 있다.
 CHARGE_KO = {
     "room": "방",       # maxcharges 만큼 방을 깨면 찬다
@@ -118,6 +175,13 @@ def main():
     print("액티브 충전 방식:", "  ".join(f"{CHARGE_KO[k]} {v}" for k, v in sorted(charge.items())))
     rooms = sorted({e["charge"] for e in types.values() if "charge" in e})
     print("방 충전 칸 수 종류:", rooms)
+    trans = load_transformations()
+    counts = {}
+    for names in trans.values():
+        for n in names:
+            counts[n["ko"]] = counts.get(n["ko"], 0) + 1
+    print(f"변신 세트: {len(counts)}종 / 세트에 속한 아이템 {len(trans)}개")
+    print("  " + "  ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda x: -x[1])))
     for kind, table in quality.items():
         counts = {}
         for value in table.values():

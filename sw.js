@@ -2,7 +2,7 @@
    설치할 때 필요한 파일을 통째로 받아두고, 그 다음부터는 캐시부터 본다. */
 
 // 파일을 고칠 때마다 올린다. 올리지 않으면 이미 방문한 기기가 예전 파일을 계속 쓴다.
-const VERSION = "v6";
+const VERSION = "v7";
 const CACHE = `isaac-items-${VERSION}`;
 const ASSETS = [
   "./",
