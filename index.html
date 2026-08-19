@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>아이작 아이템 한글 도감</title>
+<meta name="description" content="The Binding of Isaac 아이템과 장신구를 색깔별로 모아 본 한글 도감. 아이콘 색으로 찾고, 초성으로 검색합니다.">
+<meta name="theme-color" content="#0f1013">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/app-192.png">
+<link rel="apple-touch-icon" href="assets/icons/app-192.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-row">
+    <h1>아이작 <b>한글 도감</b></h1>
+    <div class="seg" role="group" aria-label="종류">
+      <button type="button" data-kind="all" class="on">전체</button>
+      <button type="button" data-kind="item">아이템</button>
+      <button type="button" data-kind="trinket">장신구</button>
+      <button type="button" data-kind="card">카드</button>
+    </div>
+  </div>
+
+  <div class="search">
+    <input id="q" type="search" inputmode="search" autocomplete="off"
+           placeholder="이름 · 효과 · 장소 · 초성 검색 (예: ㅅㅍㅇㅍ, 천사방)" aria-label="아이템 검색">
+    <button type="button" id="clear" aria-label="검색어 지우기" hidden>×</button>
+  </div>
+
+  <nav class="chips" id="chips" aria-label="색깔 고르기"></nav>
+  <nav class="chips quality" id="quals" aria-label="등급 고르기"></nav>
+</header>
+
+<main id="list" aria-live="polite"></main>
+
+<p class="empty" id="empty" hidden>찾는 아이템이 없습니다.<br><span>다른 색깔을 골라 보거나 검색어를 줄여 보세요.</span></p>
+
+<footer class="credits">
+  <p class="quip">이름은 안 떠오르는데 생김새만 기억날 때.<br>
+     그래서 버전 대신 <b>색깔</b>로 묶었습니다.</p>
+
+  <p class="by">만든 사람 ·
+     <a href="https://www.youtube.com/@bbanghyong" rel="noreferrer">빵형의 개발도상국</a></p>
+
+  <p>아이작은 <b>Nicalis, Inc.</b> 와 <b>Edmund McMillen</b> 의 것입니다.
+     여기는 팬이 만든 비영리 도감이라 공식과는 아무 관계가 없습니다.</p>
+  <p>한글 이름과 설명은 <b>EID</b> 한국어 번역 기여자들 덕분입니다 ·
+     등급과 등장 장소는 게임 XML 에서 ·
+     카드 그림은 <a href="https://bindingofisaacrebirth.wiki.gg" rel="noreferrer">Rebirth Wiki</a> 에서 ·
+     색깔로 묶는다는 발상은 <a href="https://tboi.com" rel="noreferrer">tboi.com</a> 에서 빌렸습니다.</p>
+  <p id="stamp"></p>
+</footer>
+
+<div class="sheet-backdrop" id="backdrop" hidden></div>
+<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-name" hidden>
+  <button type="button" class="grab" id="sheet-close" aria-label="닫기"></button>
+  <div class="sheet-head">
+    <div class="icon lg" id="sheet-icon"></div>
+    <div class="sheet-title">
+      <h2 id="sheet-name"></h2>
+      <p id="sheet-en"></p>
+      <p class="meta"><span id="sheet-kind"></span><span id="sheet-id"></span><span id="sheet-color"></span><span id="sheet-quality" hidden></span></p>
+    </div>
+  </div>
+  <ul class="effects" id="sheet-desc"></ul>
+  <div class="pools" id="sheet-pools" hidden>
+    <h3>등장 장소</h3>
+    <div class="pool-list" id="sheet-pool-list"></div>
+  </div>
+</aside>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

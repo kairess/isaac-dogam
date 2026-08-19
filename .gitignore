@@ -1,0 +1,7 @@
+# 내려받은 원본 (fetch_sources.py 로 언제든 다시 만들 수 있다)
+tools/_cache/
+# 색상 검수용으로 생성되는 페이지
+tools/_report/
+__pycache__/
+*.pyc
+.DS_Store

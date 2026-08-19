@@ -1,0 +1,6 @@
+{
+  "_note": "영문 이름 정규화만으로는 아이콘 파일을 못 찾는 예외. 값은 tools/_cache/icons/trinket/ 안의 파일 이름.",
+  "trinket:57": "Blue_Babys_Soul.png",
+  "trinket:127": "BabyBender.png",
+  "trinket:138": "Trinket_M.png"
+}

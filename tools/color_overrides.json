@@ -1,0 +1,4 @@
+{
+  "_note": "자동 분류가 눈에 보이는 색과 다를 때 여기서 바로잡는다. tools/_report/colors.html 로 검수한 뒤 채운다.",
+  "_example": "item:105 처럼 적고 값은 red/orange/yellow/green/blue/purple/pink/brown/mono 중 하나."
+}
