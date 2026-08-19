@@ -80,23 +80,75 @@ TRANSFORM_EFFECT = {
 }
 
 
-def load_transformations():
-    """{아이템id: [{'ko','en'}, ...]} 를 돌려준다.
+# 게임은 변신을 아이템 태그로 판정한다. items_metadata.xml 의 tags 가 곧 세트 명단이다.
+# EID 도 표를 들고 있지만 ab+/rep 두 층으로 나뉘고, ab+ 에는 애프터버스+ 시절 배정이 남아 있다
+# (수호천사는 그때 세라핌이었지만 리펜턴스에서 샴쌍둥이로 옮겨졌다).
+# 게임 파일을 기준으로 삼으면 우리가 쓰는 판(v1.7.9b)과 언제나 맞는다.
+TRANSFORM_TAG = {
+    1: "guppy", 2: "mushroom", 3: "fly", 4: "baby", 5: "syringe", 6: "mom",
+    7: "poop", 8: "bob", 9: "devil", 10: "angel", 12: "book", 13: "spider",
+}
+# 태그가 없어 게임이 따로 처리하는 변신. 이건 EID 표에서 가져온다.
+# 11 슈퍼 거지(거지 패밀리어 셋) · 14 성인(알약만) · 15 쿵쿵이(아이템 둘 + 알약)
+TRANSFORM_UNTAGGED = (11, 14, 15)
 
-    EID 는 "5.100.<아이템id>" 형태로 적고, 값은 변신 번호다.
-    두 변신에 걸친 아이템은 "2,15" 처럼 쉼표로 이어 적혀 있다.
-    알약으로만 되는 변신(어덜트)도 있는데 아이템이 없으니 자연히 빠진다.
-    """
+
+def _eid_assignments():
+    """EID 표에서 {변신번호: {'items': {아이템id}, 'other': 개수}} 를 읽는다."""
     text = read("transformations.lua")
     out = {}
-    for item_id, value in re.findall(r'\["5\.100\.(\d+)"\]\s*=\s*"([^"]+)"', text):
-        names = []
+    for kind, entry_id, value in re.findall(
+            r'\["5\.(\d+)\.(\d+)"\]\s*=\s*"([^"]+)"', text):
         for one in value.split(","):
             one = one.strip()
-            if one.isdigit() and int(one) in TRANSFORM_KO:
-                names.append({"ko": TRANSFORM_KO[int(one)], "en": TRANSFORM_EN[int(one)]})
-        if names:
-            out[int(item_id)] = names
+            if not one.isdigit() or int(one) not in TRANSFORM_KO:
+                continue
+            slot = out.setdefault(int(one), {"items": set(), "other": 0})
+            if kind == "100":
+                slot["items"].add(int(entry_id))
+            else:
+                slot["other"] += 1
+    return out
+
+
+def _members():
+    """{변신번호: {'items': {아이템id}, 'other': 개수}} 를 만든다."""
+    meta = read("items_metadata.xml")
+    tags = {int(i): set(t.split())
+            for i, t in re.findall(r'<item id="(\d+)"[^>]*\btags="([^"]*)"', meta)}
+    eid = _eid_assignments()
+    out = {}
+    for number, tag in TRANSFORM_TAG.items():
+        out[number] = {"items": {i for i, t in tags.items() if tag in t}, "other": 0}
+    for number in TRANSFORM_UNTAGGED:
+        slot = eid.get(number, {"items": set(), "other": 0})
+        out[number] = {"items": set(slot["items"]), "other": slot["other"]}
+    return out
+
+
+def transformation_drift():
+    """게임 태그와 EID 표가 어긋나는 곳을 알려 준다. 한쪽이 갱신되면 여기서 먼저 드러난다."""
+    eid = _eid_assignments()
+    members = _members()
+    report = []
+    for number in TRANSFORM_TAG:
+        mine = members[number]["items"]
+        theirs = eid.get(number, {"items": set()})["items"]
+        if theirs - mine or mine - theirs:
+            report.append((TRANSFORM_KO[number], sorted(theirs - mine), sorted(mine - theirs)))
+    return report
+
+
+def load_transformations():
+    """{아이템id: [{'ko','en'}, ...]} 를 돌려준다."""
+    out = {}
+    for number, slot in _members().items():
+        for item_id in slot["items"]:
+            out.setdefault(item_id, []).append(
+                {"ko": TRANSFORM_KO[number], "en": TRANSFORM_EN[number]})
+    order = {TRANSFORM_KO[n]: n for n in TRANSFORM_KO}
+    for names in out.values():
+        names.sort(key=lambda x: order[x["ko"]])   # 화면에 늘 같은 차례로 나오게
     return out
 
 
@@ -107,18 +159,14 @@ def load_transformation_stats():
     어덜트는 알약만으로 된다. 화면에 "2개 중 3개를 모으면" 이라고 적히지 않게
     아이템 밖의 구성원 수도 세어 둔다.
     """
-    text = read("transformations.lua")
     stats = {}
-    for kind, _entry_id, value in re.findall(
-            r'\["5\.(\d+)\.(\d+)"\]\s*=\s*"([^"]+)"', text):
-        for one in value.split(","):
-            one = one.strip()
-            if not one.isdigit() or int(one) not in TRANSFORM_KO:
-                continue
-            slot = stats.setdefault(TRANSFORM_KO[int(one)],
-                                    {"en": TRANSFORM_EN[int(one)], "items": 0, "other": 0,
-                                     "effect": TRANSFORM_EFFECT.get(int(one), [])})
-            slot["items" if kind == "100" else "other"] += 1
+    for number, slot in _members().items():
+        stats[TRANSFORM_KO[number]] = {
+            "en": TRANSFORM_EN[number],
+            "items": len(slot["items"]),
+            "other": slot["other"],
+            "effect": TRANSFORM_EFFECT.get(number, []),
+        }
     return stats
 
 
@@ -209,6 +257,11 @@ def main():
     print("  " + "  ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda x: -x[1])))
     missing = [TRANSFORM_KO[i] for i in TRANSFORM_KO if not TRANSFORM_EFFECT.get(i)]
     print(f"효과 설명 없는 변신: {missing or '없음'}")
+    drift = transformation_drift()
+    if drift:
+        print("게임 태그와 EID 표가 다른 곳 (태그를 따름):")
+        for ko, only_eid, only_tag in drift:
+            print(f"  {ko}: EID 에만 {only_eid} / 태그에만 {only_tag}")
     for kind, table in quality.items():
         counts = {}
         for value in table.values():

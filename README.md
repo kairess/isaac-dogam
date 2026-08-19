@@ -94,8 +94,8 @@ open tools/_report/colors.html
   이 저장소는 팬이 만든 비영리 참고 자료이며 공식과 무관합니다.
 - 한글 이름과 효과 설명: [External Item Descriptions](https://github.com/wofsauge/External-Item-Descriptions)
   한국어 번역 기여자들. 게임 공식 한국어 명칭을 따릅니다.
-- 변신 세트 구성: EID 의 `transformations.lua` · 세트 한글 이름은
-  [나무위키](https://namu.wiki/w/아이작의%20번제:%20리버스/시스템) 표기 참고
+- 변신 세트 구성: 게임의 `items_metadata.xml` 태그 (태그 없는 슈퍼 거지·쿵쿵이·성인만 EID) ·
+  세트 한글 이름은 [나무위키](https://namu.wiki/w/아이작의%20번제:%20리버스/시스템) 표기 참고
 - 등급·등장 장소·아이템 종류: 게임의 `items_metadata.xml` / `itempools.xml` / `items.xml`
   ([isaac-crafting](https://github.com/EliteMasterEric/isaac-crafting) 이 보관한 v1.7.9b 사본)
 - 아이템 아이콘: [isaac-save-viewer](https://github.com/Zamiell/isaac-save-viewer) (GPL-3.0)
@@ -122,6 +122,11 @@ open tools/_report/colors.html
   [Rebirth Wiki](https://bindingofisaacrebirth.wiki.gg/wiki/Transformations) 로 내용을 확인하고
   Repentance(v1.7.9b) 기준으로 정리했습니다. 버전에 따라 달라진 것들이 있어
   (구피의 파란 파리는 Repentance+ 에서 피격 대신 공격 적중으로 바뀜) 이 판 기준으로 적었습니다.
+- **세트 명단은 게임 태그로 판정합니다.** 게임은 `items_metadata.xml` 의 `fly`, `baby` 같은
+  태그로 변신을 세는데, EID 의 표는 `ab+` / `rep` 두 층으로 나뉘고 `ab+` 에는 애프터버스+ 시절
+  배정이 남아 있습니다 (수호천사는 그때 세라핌이었지만 리펜턴스에서 샴쌍둥이로 옮겨졌습니다).
+  게임 파일을 기준으로 삼아 우리가 쓰는 판(v1.7.9b)과 항상 맞게 했고,
+  `tools/parse_gamedata.py` 의 `transformation_drift()` 가 두 자료가 어긋나는 곳을 빌드 때 알려 줍니다.
 - **스톰피**는 아이템 2개 + 알약 1개로 3개를 채웁니다. 알약은 이 도감에 없어서
   "2개 중 3개" 로 읽히지 않게 구성을 따로 밝혀 뒀습니다.
   알약만으로 되는 **어덜트**는 아이템이 없어 아예 빠집니다.
