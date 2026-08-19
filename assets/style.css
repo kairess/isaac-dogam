@@ -307,6 +307,20 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   font-weight: 400;
   font-size: 11px;
 }
+/* 세트를 모았을 때 붙는 효과 */
+.set-effect {
+  list-style: none;
+  margin: 0 0 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.set-effect li + li { margin-top: 2px; }
+.set-effect li.up { color: var(--up); }
+.set-effect li.down { color: var(--down); }
+
 .set-row {
   display: flex;
   flex-wrap: wrap;

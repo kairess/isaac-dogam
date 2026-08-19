@@ -313,6 +313,22 @@
       const box = document.createElement("div");
       const head = document.createElement("h3");
       head.innerHTML = `세트 · ${one.ko} <span>${one.en} · ${note}</span>`;
+      box.append(head);
+
+      /* 모으면 뭐가 좋은지가 사실 제일 궁금한 부분이다. */
+      if (info.effect && info.effect.length) {
+        const effects = document.createElement("ul");
+        effects.className = "set-effect";
+        for (const line of info.effect) {
+          const li = document.createElement("li");
+          li.textContent = line;
+          if (line.startsWith("↑")) li.className = "up";
+          else if (line.startsWith("↓")) li.className = "down";
+          effects.append(li);
+        }
+        box.append(effects);
+      }
+
       const row = document.createElement("div");
       row.className = "set-row";
       for (const member of members) {
@@ -327,7 +343,7 @@
         button.addEventListener("click", () => open(member));
         row.append(button);
       }
-      box.append(head, row);
+      box.append(row);
       setsEl.append(box);
     }
 

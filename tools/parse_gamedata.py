@@ -57,6 +57,28 @@ TRANSFORM_EN = {
 # 변신에 필요한 개수. 모든 변신이 3개로 같다.
 TRANSFORM_NEEDED = 3
 
+# 변신을 마쳤을 때 실제로 붙는 효과. Repentance(v1.7.9b) 기준으로 적었다.
+# 아이템 설명과 같은 말투를 쓰고, 능력치 증감은 ↑ ↓ 로 앞을 맞춘다.
+TRANSFORM_EFFECT = {
+    1: ["날 수 있게 됩니다.", "피격 시 아군 파란 파리가 나옵니다."],
+    2: ["↑ 최대 체력 +1"],
+    3: ["날 수 있게 됩니다.", "적 파리가 아군으로 바뀝니다."],
+    4: ["머리 양옆에 혹이 붙어 대각선으로 함께 공격합니다.",
+        "↓ 공격력 -0.3", "↓ 연사 -0.3"],
+    5: ["↑ 공격력 +2", "↑ 이동속도 +0.15", "알약을 1개 떨어뜨립니다."],
+    6: ["엄마의 칼이 뒤에 꼬리처럼 따라붙습니다."],
+    7: ["똥을 부술 때마다 빨간 하트를 반 칸 회복합니다."],
+    8: ["지나간 자리에 초당 6의 피해를 주는 독 장판이 깔립니다."],
+    9: ["날 수 있게 됩니다.", "블랙하트를 2개 얻습니다."],
+    10: ["날 수 있게 됩니다.", "소울하트를 3개 얻습니다."],
+    11: ["거지 패밀리어 셋이 보상을 두 배로 주는 슈퍼 거지 하나로 합쳐집니다."],
+    12: ["약 25% 확률로 눈물이 하나 더 나갑니다."],
+    13: ["적에게 무작위 상태 이상을 거는 거미 패밀리어가 따라다닙니다."],
+    14: ["↑ 최대 체력 +1"],
+    15: ["몸집이 커집니다.", "피격 시 일정 확률로 주변에 충격파가 퍼집니다.",
+         "걸어다니는 것만으로 장애물을 부숩니다."],
+}
+
 
 def load_transformations():
     """{아이템id: [{'ko','en'}, ...]} 를 돌려준다.
@@ -94,7 +116,8 @@ def load_transformation_stats():
             if not one.isdigit() or int(one) not in TRANSFORM_KO:
                 continue
             slot = stats.setdefault(TRANSFORM_KO[int(one)],
-                                    {"en": TRANSFORM_EN[int(one)], "items": 0, "other": 0})
+                                    {"en": TRANSFORM_EN[int(one)], "items": 0, "other": 0,
+                                     "effect": TRANSFORM_EFFECT.get(int(one), [])})
             slot["items" if kind == "100" else "other"] += 1
     return stats
 
@@ -184,6 +207,8 @@ def main():
             counts[n["ko"]] = counts.get(n["ko"], 0) + 1
     print(f"변신 세트: {len(counts)}종 / 세트에 속한 아이템 {len(trans)}개")
     print("  " + "  ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda x: -x[1])))
+    missing = [TRANSFORM_KO[i] for i in TRANSFORM_KO if not TRANSFORM_EFFECT.get(i)]
+    print(f"효과 설명 없는 변신: {missing or '없음'}")
     for kind, table in quality.items():
         counts = {}
         for value in table.values():
