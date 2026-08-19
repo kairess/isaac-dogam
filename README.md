@@ -4,6 +4,8 @@ The Binding of Isaac 의 아이템과 장신구를 **색깔별로 묶어** 보�
 
 **바로 보기 → https://kairess.github.io/isaac-dogam/**
 
+리펜턴스(Repentance) 기준입니다. 콘솔판(PS5 · Xbox · 스위치)과 같습니다.
+
 만든 사람 · [빵형의 개발도상국](https://www.youtube.com/@bbanghyong)
 
 [tboi.com](https://tboi.com) 은 아이템을 Rebirth / Afterbirth / Afterbirth+ / Repentance 로 나눠 놓지만,
@@ -106,6 +108,20 @@ open tools/_report/colors.html
 
 > EID 저장소에는 라이선스 파일이 없습니다. 출처를 분명히 밝히고 **광고 없이 비영리로** 두는 것을 권합니다.
 > 게임 자산을 직접 담고 싶지 않다면 `--local-icons` 로 각자 설치본에서 아이콘을 뽑아 쓰면 됩니다.
+
+## 기준 판
+
+**리펜턴스(Repentance) v1.7.9b** 기준입니다. PS5 · Xbox · 스위치 등 콘솔판이 여기에 해당합니다.
+
+**리펜턴스+(Repentance+, PC 1.9.x)는 일부러 반영하지 않았습니다.** 리펜턴스+ 는 아이템을
+하나도 늘리지 않아서(최대 아이템 ID 732 로 동일) 목록은 두 판이 같지만, 아이템 설명 52건과
+변신 구성이 달라집니다. 이걸 얹으면 리펜턴스로 하는 사람에게는 오히려 안 맞는 설명이 되고,
+없는 변신(네크로맨서)까지 목록에 뜹니다.
+
+리펜턴스+ 로 옮기고 싶다면 EID 의 `descriptions/rep+/` 층을 얹으면 됩니다.
+다만 등급 · 액티브/패시브 · 충전량 · 세트 태그를 뽑아 쓰는 게임 원본 XML 은
+공개된 사본이 v1.7.9b 에서 멈춰 있어, 게임을 가진 사람이 자기 설치 폴더의
+`resources-dlc3/` 에서 직접 꺼내 와야 합니다.
 
 ## 알려진 한계
 
