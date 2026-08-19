@@ -198,14 +198,20 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   background-color: var(--tile);
   border-radius: 8px;
   background-repeat: no-repeat;
+  /* 시트 전체를 칸 크기에 맞춰 늘리고, 칸 번호로 위치를 잡는다.
+     픽셀 값을 JS 로 박아 두면 --cell 을 바꿨을 때 그림만 제자리에 남아 칸 안에서 밀린다. */
+  background-size: calc(var(--sprite-cols, 30) * var(--cell)) auto;
+  background-position:
+    calc(var(--sx, 0) * var(--cell) * -1)
+    calc(var(--sy, 0) * var(--cell) * -1);
   /* 도트 그림이라 매끄럽게 늘이면 뭉개진다. */
   image-rendering: pixelated;
   flex: 0 0 auto;
 }
+/* 상세 시트의 큰 아이콘. 칸 크기만 바꿔 주면 위치는 위 규칙이 알아서 맞춘다. */
 .icon.lg {
-  width: 96px; height: 96px;
+  --cell: 96px;
   border-radius: 12px;
-  background-size: calc(var(--sheet-cols, 30) * 96px) auto;
 }
 
 .empty {
@@ -338,7 +344,6 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
 /* ---------- 큰 화면 ---------- */
 
 @media (min-width: 720px) {
-  :root { --cell: 72px; }
   .bar { padding: 12px 24px 10px; }
   main, .credits { max-width: 1100px; margin-inline: auto; }
   main { padding: 20px 24px 48px; }

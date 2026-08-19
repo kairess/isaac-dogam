@@ -68,13 +68,14 @@
 
   /* ---------- 그리기 ---------- */
 
-  function spritePos(entry, cell) {
+  /* 스프라이트 칸 번호만 넘긴다. 실제 픽셀 위치는 CSS 가 --cell 을 보고 계산한다. */
+  function placeIcon(node, entry) {
     const { cols } = DATA.sprite;
-    return `${-(entry.idx % cols) * cell}px ${-Math.floor(entry.idx / cols) * cell}px`;
+    node.style.setProperty("--sx", entry.idx % cols);
+    node.style.setProperty("--sy", Math.floor(entry.idx / cols));
   }
 
   function build() {
-    const cell = DATA.sprite.cell;
     const byColor = new Map(DATA.buckets.map((b) => [b.key, []]));
     for (const entry of DATA.entries) byColor.get(entry.color).push(entry);
 
@@ -97,8 +98,7 @@
         button.title = entry.ko;
         const icon = document.createElement("span");
         icon.className = "icon";
-        // 스프라이트 시트는 원본 크기(64px) 그대로 쓰므로 배경 크기는 손대지 않는다.
-        icon.style.backgroundPosition = spritePos(entry, cell);
+        placeIcon(icon, entry);
         button.append(icon);
         button.addEventListener("click", () => open(entry));
         grid.append(button);
@@ -221,12 +221,7 @@
 
   function open(entry) {
     lastFocused = document.activeElement;
-    const icon = $("sheet-icon");
-    // 큰 아이콘은 96px 이다. 스프라이트 전체를 같은 배율로 늘려야 칸 좌표가 맞는다.
-    const { cols } = DATA.sprite;
-    icon.style.backgroundSize = `${cols * 96}px auto`;
-    icon.style.backgroundPosition =
-      `${-(entry.idx % cols) * 96}px ${-Math.floor(entry.idx / cols) * 96}px`;
+    placeIcon($("sheet-icon"), entry);
 
     $("sheet-name").textContent = entry.ko;
     $("sheet-en").textContent = entry.en;
@@ -366,7 +361,7 @@
     .then((data) => {
       DATA = data;
       DATA.entries.forEach(indexEntry);
-      document.documentElement.style.setProperty("--sheet-cols", DATA.sprite.cols);
+      document.documentElement.style.setProperty("--sprite-cols", DATA.sprite.cols);
       buildChips();
       buildQualityChips();
       build();
