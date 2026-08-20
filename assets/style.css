@@ -210,8 +210,9 @@ body {
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px #0006;
 }
-.chips button .n { color: #6b7280; font-size: 11px; font-variant-numeric: tabular-nums; }
 .chips button.on { background: var(--text); color: #101114; border-color: var(--text); }
+/* 숫자는 등급 칩에만 남아 있다. 색깔 칩은 띠 위의 이정표라 개수가 필요 없다. */
+.chips button .n { color: #6b7280; font-size: 11px; font-variant-numeric: tabular-nums; }
 .chips button.on .n { color: #4b5563; }
 
 /* 등급 줄은 색깔 줄보다 한 단계 작게 두어 위계를 만든다. */

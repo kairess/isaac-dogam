@@ -113,27 +113,24 @@
     listEl.append(grid);
   }
 
+  /* 칩으로 내보내는 색. 자료는 열두 갈래로 나누지만 띠 위에 세울 이정표는
+     무지개와 갈색·검정이면 넉넉하다. 분홍·살구·흰색·회색은 이 사이사이에
+     그대로 놓여 있고, 내려가다 보면 만나게 된다. */
+  const CHIPS = ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"];
+
   function buildChips() {
-    const counts = new Map();
-    for (const entry of DATA.entries) {
-      counts.set(entry.color, (counts.get(entry.color) || 0) + 1);
-    }
-    const make = (key, label, dot, count) => {
+    for (const key of CHIPS) {
+      const bucket = DATA.buckets.find((b) => b.key === key);
+      const group = DATA.entries.filter((e) => e.color === key);
+      if (!bucket || !group.length) continue;
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.color = key;
+      // 칩의 점 색은 그 묶음의 실제 대표색 평균이라, 화면 색과 아이콘 색이 따로 놀지 않는다.
       button.innerHTML =
-        (dot ? `<span class="dot" style="background:${dot}"></span>` : "") +
-        `${label}<span class="n">${count}</span>`;
+        `<span class="dot" style="background:${averageHex(group)}"></span>${bucket.ko}`;
       button.addEventListener("click", () => jumpTo(key));
       chipsEl.append(button);
-    };
-    make("all", "전체", "", DATA.entries.length);
-    // 칩의 점 색은 그 묶음의 실제 대표색 평균이라, 화면 색과 아이콘 색이 따로 놀지 않는다.
-    for (const bucket of DATA.buckets) {
-      const group = DATA.entries.filter((e) => e.color === bucket.key);
-      if (!group.length) continue;
-      make(bucket.key, bucket.ko, averageHex(group), group.length);
     }
   }
 
@@ -220,11 +217,6 @@
      그 거리를 애니메이션으로 흘리면 몇 초를 기다려야 하고 눈도 어지럽다.
      대신 칩에 불이 들어와 지금 어느 색에 서 있는지 알려 준다. */
   function jumpTo(key) {
-    if (key === "all") {
-      window.scrollTo(0, 0);
-      spy();
-      return;
-    }
     // 검색이나 종류로 걸러 둔 상태면 남아 있는 것 중 첫째로 간다.
     const first = visible.find((card) => card.entry.color === key);
     if (!first) return;
@@ -257,9 +249,11 @@
     }
     const here = found < 0 ? null : visible[found].entry.color;
     for (const button of chipsEl.children) {
-      const on = button.dataset.color === (here || "all");
+      // 칩이 없는 색(분홍·살구·흰색·회색)에 서 있으면 아무 데도 불이 안 들어온다.
+      // 엉뚱한 칩을 켜서 여기가 갈색이라고 우기는 것보다 낫다.
+      const on = button.dataset.color === here;
       button.classList.toggle("on", on);
-      if (on && button.dataset.color !== "all") {
+      if (on) {
         // 칩 줄도 가로로 따라 움직여야 지금 색이 눈에 보인다.
         const box = chipsEl.getBoundingClientRect();
         const chip = button.getBoundingClientRect();
