@@ -359,8 +359,10 @@
       poolList.append(span);
     }
 
+    resetDrag();
     sheetEl.hidden = false;
     backdropEl.hidden = false;
+    sheetEl.scrollTop = 0;
     document.body.style.overflow = "hidden";
     $("sheet-close").focus();
     writeHash(entry);
@@ -370,9 +372,97 @@
     if (sheetEl.hidden) return;
     sheetEl.hidden = true;
     backdropEl.hidden = true;
+    resetDrag();
     document.body.style.overflow = "";
     if (lastFocused) lastFocused.focus();
     writeHash();
+  }
+
+  /* ---------- 아래로 밀어서 닫기 ----------
+     시트는 화면 아래에 붙어 있는데 닫는 자리(배경·손잡이)는 위에 있다.
+     한 손으로 폰을 쥔 채 엄지를 위로 뻗는 게 은근히 번거롭다.
+     손잡이가 이미 "잡아 끌 수 있게" 생겼으니 진짜로 끌리게 만든다.
+     손가락을 따라 내려오다가, 충분히 내렸거나 툭 튕기면 닫힌다. */
+
+  const wide = window.matchMedia("(min-width: 720px)");
+  const CLOSE_DIST = 96;   // 이만큼 내리면 닫는다
+  const CLOSE_FLICK = 0.5; // px/ms. 짧게 튕겨도 닫히게
+
+  let drag = null;
+  let dragged = false; // 방금 끝난 손짓이 끌기였는지 (손잡이 클릭과 구분)
+
+  function resetDrag() {
+    drag = null;
+    sheetEl.classList.remove("dragging");
+    sheetEl.style.transition = "";
+    sheetEl.style.transform = "";
+    backdropEl.style.transition = "";
+    backdropEl.style.opacity = "";
+  }
+
+  function dragStart(event) {
+    // 데스크톱은 Esc 와 배경 클릭이 이미 편하다. 마우스 드래그는 글자 선택을 방해한다.
+    if (event.pointerType === "mouse" || wide.matches) return;
+    // 손잡이는 언제나 끌 수 있고, 나머지 부분은 이미 맨 위까지 올라와 있을 때만.
+    // 내용을 읽으려고 위로 올리는 손짓이 닫기로 오해받으면 안 된다.
+    const fromGrab = event.target.closest(".grab");
+    if (!fromGrab && sheetEl.scrollTop > 0) return;
+    dragged = false;
+    drag = {
+      x: event.clientX, y: event.clientY, dy: 0, on: false, down: false,
+      // 속도는 마지막 한 순간만 본다. 천천히 끌다가 마지막에 툭 튕기는
+      // 손짓도 제대로 잡으려면 시작점부터의 평균으로는 안 된다.
+      vy: event.clientY, vt: event.timeStamp,
+    };
+  }
+
+  function dragMove(event) {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    drag.down = dy > 0; // touchmove 에서 브라우저 스크롤을 막을지 판단하는 근거
+
+    if (!drag.on) {
+      // 아래로 내려가는 손짓인지 확실해질 때까지 기다린다.
+      if (dy < -6 || Math.abs(dx) > Math.abs(dy) + 4) { drag = null; return; }
+      if (dy < 8) return;
+      drag.on = true;
+      dragged = true;
+      sheetEl.classList.add("dragging");
+      sheetEl.style.transition = "none";
+      backdropEl.style.transition = "none";
+      try { sheetEl.setPointerCapture(event.pointerId); } catch (_) {}
+    }
+
+    if (event.timeStamp - drag.vt > 60) { drag.vy = event.clientY; drag.vt = event.timeStamp; }
+    drag.dy = dy > 0 ? dy : dy / 5; // 위로는 살짝만 따라와 고무줄처럼 버틴다
+    sheetEl.style.transform = `translateY(${drag.dy}px)`;
+    backdropEl.style.opacity = String(Math.max(0, 1 - drag.dy / 400));
+  }
+
+  function dragEnd(event) {
+    if (!drag) return;
+    const { on, dy, vy, vt } = drag;
+    drag = null;
+    if (!on) return;
+
+    const speed = (event.clientY - vy) / Math.max(1, event.timeStamp - vt);
+    sheetEl.classList.remove("dragging");
+
+    if (dy > CLOSE_DIST || (speed > CLOSE_FLICK && dy > 24)) {
+      // 손을 뗀 자리에서 그대로 미끄러져 내려가게 둔다. 툭 끊기면 어색하다.
+      sheetEl.style.transition = "transform .16s ease-in";
+      backdropEl.style.transition = "opacity .16s ease-in";
+      sheetEl.style.transform = "translateY(100%)";
+      backdropEl.style.opacity = "0";
+      setTimeout(close, 150);
+      return;
+    }
+
+    sheetEl.style.transition = "transform .2s cubic-bezier(.2, .8, .3, 1)";
+    backdropEl.style.transition = "opacity .2s ease";
+    sheetEl.style.transform = "";
+    backdropEl.style.opacity = "";
   }
 
   /* ---------- 주소창에 상태 남기기 ----------
@@ -434,7 +524,21 @@
       });
     }
     backdropEl.addEventListener("click", close);
-    $("sheet-close").addEventListener("click", close);
+    $("sheet-close").addEventListener("click", () => {
+      // 끌어내리다 되돌아온 손짓이 클릭으로 새어 나오면 엉뚱하게 닫힌다.
+      if (dragged) { dragged = false; return; }
+      close();
+    });
+    sheetEl.addEventListener("pointerdown", dragStart);
+    sheetEl.addEventListener("pointermove", dragMove);
+    /* pointermove 를 막아 봐야 스크롤은 안 멈춘다. 브라우저가 손짓을 스크롤로
+       가져가 버리면 pointercancel 이 날아오고 끌기가 중간에 끊긴다.
+       실제로 스크롤을 붙잡아 두는 건 touchmove 쪽이다. */
+    sheetEl.addEventListener("touchmove", (event) => {
+      if (drag && drag.down && event.cancelable) event.preventDefault();
+    }, { passive: false });
+    sheetEl.addEventListener("pointerup", dragEnd);
+    sheetEl.addEventListener("pointercancel", () => { drag = null; resetDrag(); });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") close();
       if (event.key === "/" && document.activeElement !== searchEl) {

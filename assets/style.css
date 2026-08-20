@@ -244,9 +244,12 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   background: var(--panel);
   border-top: 1px solid var(--line);
   border-radius: 18px 18px 0 0;
-  padding: 6px 18px calc(22px + env(safe-area-inset-bottom));
+  padding: 0 18px calc(22px + env(safe-area-inset-bottom));
   max-height: 78vh;
   overflow-y: auto;
+  /* 시트 안을 끝까지 넘겨도 뒤 목록까지 딸려 스크롤되지 않게 막는다.
+     아래로 밀어서 닫는 동작을 브라우저가 가로채지 않게 하는 역할도 한다. */
+  overscroll-behavior: contain;
   animation: rise .2s cubic-bezier(.2, .8, .3, 1);
 }
 
@@ -257,15 +260,35 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   .sheet, .sheet-backdrop { animation: none; }
 }
 
+/* 손잡이. 보이는 건 작은 알약이지만, 누르는 자리는 시트 폭 전체다.
+   폰에서 5px 짜리 막대를 정확히 겨누게 하는 건 무리다. */
 .grab {
   display: block;
-  width: 42px; height: 5px;
-  margin: 6px auto 12px;
+  /* 긴 시트를 내려 읽는 중에도 손잡이는 늘 맨 위에 붙어 있어야 한다.
+     닫으려고 다시 위로 스크롤해 올라오게 만들면 손잡이가 있으나 마나다. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel);
+  width: calc(100% + 36px); height: 32px;
+  margin: 0 -18px;
   border: 0; padding: 0;
+  cursor: grab;
+  /* 여기서 시작한 손짓은 스크롤이 아니라 무조건 '끌어내리기'다. */
+  touch-action: none;
+}
+.grab::before {
+  content: "";
+  display: block;
+  width: 42px; height: 5px;
+  margin: 10px auto 0;
   border-radius: 3px;
   background: var(--line);
-  cursor: pointer;
+  transition: background .15s ease;
 }
+.grab:hover::before { background: var(--dim); }
+.sheet.dragging { cursor: grabbing; }
+.sheet.dragging .grab::before { background: var(--dim); }
 
 .sheet-head { display: flex; gap: 14px; align-items: flex-start; }
 .sheet-title { min-width: 0; }
@@ -412,6 +435,10 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   .bar { padding: 12px 24px 10px; }
   main, .credits { max-width: 1100px; margin-inline: auto; }
   main { padding: 20px 24px 48px; }
+  /* 넓은 화면에서는 끌어내리기를 켜지 않는다 (Esc·배경 클릭이 더 빠르다).
+     손 모양만 '잡을 수 있다'고 거짓말하지 않게 되돌린다. */
+  .grab { cursor: pointer; }
+
   .sheet {
     left: 50%; bottom: 24px;
     transform: translateX(-50%);
