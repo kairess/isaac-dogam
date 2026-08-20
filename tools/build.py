@@ -103,6 +103,9 @@ def classify(entries, report):
         key = f"{entry['kind']}:{entry['id']}"
         if key in color_overrides:
             info["color"] = color_overrides[key]
+            if info["color"] in colors.ACHROMATIC:
+                # 손으로 무채색에 보낸 항목은 비중 대신 밝기로 줄을 세워야 이웃과 눈금이 맞는다.
+                info["weight"] = info["value"]
             report["color_overridden"] += 1
         entry.update(info)
     return entries
@@ -232,19 +235,22 @@ def write_report(entries):
         "figcaption{font-size:10px;color:#aaa;word-break:keep-all;line-height:1.2;margin-top:3px}"
         "p.hint{color:#9aa;max-width:60em}</style>",
         "<h1>색상 분류 검수</h1>",
-        "<p class='hint'>눈에 보이는 색과 다르게 묶인 아이콘을 찾아 "
+        "<p class='hint'>묶음 안은 <b>그 색이 짙은 것부터</b> 늘어놓았습니다 "
+        "(아래 숫자가 비중). 뒤로 갈수록 색이 옅어지는 건 정상이고, "
+        "눈에 보이는 색과 아예 다르게 묶인 아이콘을 찾아 "
         "<code>tools/color_overrides.json</code> 에 <code>\"item:105\": \"red\"</code> 형태로 적고 "
         "<code>python3 tools/build.py</code> 를 다시 실행하세요.</p>",
     ]
     for key, ko, emoji in colors.BUCKETS:
-        group = sorted(by_bucket[key], key=lambda e: e["hue"])
+        group = sorted(by_bucket[key], key=lambda e: -e["weight"])
         parts.append(f"<h2>{emoji} {ko} ({len(group)})</h2><div class='grid'>")
         for entry in group:
             rel = Path("..") / entry["path"].relative_to(ROOT)
             label = entry["ko"] or entry["en"]
             parts.append(
                 f"<figure><img src='{rel}' alt=''>"
-                f"<figcaption>{entry['kind'][0]}{entry['id']}<br>{label}</figcaption></figure>"
+                f"<figcaption>{entry['kind'][0]}{entry['id']}<br>{label}"
+                f"<br><b>{entry['weight']:.2f}</b></figcaption></figure>"
             )
         parts.append("</div>")
     path = REPORT / "colors.html"
@@ -268,8 +274,9 @@ def main():
     print("[3/5] 대표 색상 추출 · 등급 · 등장 장소")
     entries = classify(entries, report)
     entries = attach_gamedata(entries, report)
-    # 색깔 묶음 순서 -> 묶음 안에서는 색조 순. 무지개처럼 이어져 눈으로 훑기 좋다.
-    entries.sort(key=lambda e: (BUCKET_ORDER[e["color"]], e["hue"], e["kind"], e["id"]))
+    # 색깔 묶음 순서 -> 묶음 안에서는 그 색이 짙은 것부터. 온통 빨간 아이콘이 앞에 서고
+    # 빨간 점만 몇 개 찍힌 아이콘이 뒤로 밀린다. 마지막 검정 묶음 끝이 가장 어둡다.
+    entries.sort(key=lambda e: (BUCKET_ORDER[e["color"]], -e["weight"], e["kind"], e["id"]))
 
     print("[4/5] 스프라이트 시트")
     sprite_path, sprite_size = write_sprite(entries)
