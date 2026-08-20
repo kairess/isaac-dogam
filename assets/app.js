@@ -592,14 +592,39 @@
     const badge = $("fresh");
     if (!badge) return;
 
+    const verEl = $("ver");
     let busy = false;
+    let mine = null;   // 지금 화면이 물고 있는 판
+    let latest = null; // 서버에 올라와 있는 판
     // 첫 방문에는 워커가 페이지를 넘겨받으면서 controllerchange 가 한 번 뜬다.
     // 그건 새 판이 아니라 그냥 설치다.
     const hadWorker = !!navigator.serviceWorker.controller;
 
+    function paint() {
+      if (!verEl) return;
+      if (!mine) { verEl.hidden = true; return; }
+      const stale = !!latest && latest !== mine;
+      verEl.hidden = false;
+      // 머리말은 폭이 빠듯하니 짧게. 새 판 번호는 빨간 동그라미와 맨 아래가 맡는다.
+      verEl.textContent = mine;
+      verEl.classList.toggle("stale", stale);
+      if (stale) badge.setAttribute("aria-label", `새 판 ${latest} 나왔습니다. 눌러서 받기`);
+
+      const build = $("build");
+      if (build) {
+        build.hidden = false;
+        build.textContent = stale
+          ? `이 기기는 ${mine} · 새 판 ${latest} 나왔습니다 — 제목 옆 빨간 동그라미를 누르세요`
+          : `이 기기는 ${mine} · 최신입니다`;
+      }
+    }
+
     function show() {
       if (busy) return;
       badge.hidden = false;
+      // 좁은 화면에서는 배지가 들어설 자리를 판 번호에서 빌려 온다.
+      const heading = badge.closest("h1");
+      if (heading) heading.classList.add("alerting");
     }
 
     // 지금 페이지를 먹여 살리고 있는 워커에게 판 번호를 물어본다.
@@ -617,14 +642,25 @@
       });
     }
 
+    // 첫 방문에는 워커가 페이지를 넘겨받기 전이라 아직 대답할 상대가 없다. 잠깐 기다려 준다.
+    async function myVersion() {
+      for (let i = 0; i < 4; i++) {
+        const found = await askWorker();
+        if (found) return found;
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
+      return null;
+    }
+
     async function check() {
-      if (busy || !navigator.onLine || !badge.hidden) return;
+      if (busy || !navigator.onLine) return;
       try {
         // 캐시를 건너뛰고 서버 것을 그대로 읽어야 판 번호를 견줄 수 있다.
         const response = await fetch("sw.js", { cache: "no-store" });
         if (!response.ok) return;
-        const latest = (/VERSION\s*=\s*"([^"]+)"/.exec(await response.text()) || [])[1];
-        const mine = await askWorker();
+        latest = (/VERSION\s*=\s*"([^"]+)"/.exec(await response.text()) || [])[1] || latest;
+        mine = (await askWorker()) || mine;
+        paint();
         if (latest && mine && latest !== mine) show();
       } catch (_) { /* 통신이 안 되면 다음 기회에 */ }
     }
@@ -653,19 +689,27 @@
       location.reload();
     }
 
-    badge.addEventListener("click", refresh);
+    badge.addEventListener("click", (event) => {
+      // 제목 안에 든 버튼이라 그냥 두면 제목의 새로고침까지 같이 걸린다.
+      event.stopPropagation();
+      refresh();
+    });
 
     // 뒤에서 워커가 조용히 새 판으로 갈아탄 경우. 화면의 코드는 아직 예전 것이다.
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (hadWorker) show();
     });
 
-    check();
+    myVersion().then((found) => { mine = found; paint(); check(); });
     // 게임하다 다시 들여다볼 때마다 한 번씩 확인한다. 켜 둔 채로 며칠 지나도 놓치지 않게.
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) check();
     });
   }
+
+  // 제목을 누르면 그냥 새로고침. 새 판 받기는 옆의 빨간 동그라미가 맡는다.
+  const reloadEl = $("reload");
+  if (reloadEl) reloadEl.addEventListener("click", () => location.reload());
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

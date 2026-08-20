@@ -67,12 +67,51 @@ body {
   font-weight: 500;
   color: var(--dim);
   white-space: nowrap;
+  /* 자리가 모자라면 제목이 줄어든다. 종류 단추가 두 줄로 접히는 것보다 낫다. */
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
 }
 .bar h1 b { color: var(--text); font-weight: 700; }
 
+/* 제목을 누르면 새로고침. 버튼이지만 제목처럼 보여야 한다. */
+.title {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0; padding: 0; margin: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.title:active { opacity: .55; }
+.title:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* 지금 화면이 물고 있는 판 번호. 새 판이 있으면 v12 → v13 으로 늘어난다. */
+.ver {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: .2px;
+}
+.ver.stale { color: #e5484d; }
+/* 좁은 화면에서 자리가 겹치면 판 번호를 접는다. 제목과 빨간 동그라미가 먼저다.
+   판 번호는 맨 아래 꼬리말에도 늘 적혀 있다. */
+@media (max-width: 359px) { .ver { display: none; } }
+@media (max-width: 389px) { h1.alerting .ver { display: none; } }
+
 /* 새 판이 올라왔을 때만 제목 옆에 붙는 빨간 동그라미. 누르면 캐시를 비우고 새로 받는다. */
 .fresh {
-  vertical-align: super;
+  flex: none;
+  /* 제목 오른쪽 위에 살짝 올려 붙인다. */
+  align-self: flex-start;
+  margin-top: -1px;
   margin-left: 7px;
   width: 17px; height: 17px;
   border: 0; padding: 0;
@@ -91,6 +130,7 @@ body {
 
 .seg {
   display: flex;
+  flex: none;
   background: var(--panel-2);
   border-radius: 999px;
   padding: 2px;
@@ -104,6 +144,12 @@ body {
   padding: 5px 11px;
   border-radius: 999px;
   cursor: pointer;
+  /* 글자가 단추 안에서 접히면 머리말이 세 줄이 된다. */
+  white-space: nowrap;
+}
+/* 좁은 폰에서는 단추를 조금 좁혀 제목이 잘리지 않게 자리를 내준다. */
+@media (max-width: 420px) {
+  .seg button { padding-left: 8px; padding-right: 8px; }
 }
 .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 3px #0006; }
 
