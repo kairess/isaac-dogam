@@ -120,7 +120,22 @@
   const CHIPS = ["red", "orange", "yellow", "green", "blue", "purple",
                  "brown", "white", "black"];
 
+  /* 색깔 -> 그 색을 대표해 불이 들어올 칩. 칩이 없는 색(분홍·살구·회색)은
+     바로 앞서 지나온 칩에 맡긴다. 목차가 소제목 자리에서도 큰 제목을 켜 두는
+     것과 같다. 이렇게 안 하면 띠의 23%(마흔 몇 줄)에서 칩이 통째로 꺼져,
+     내려가는 동안 눈금이 끊긴 것처럼 보인다. */
+  const chipFor = new Map();
+
+  function mapChips() {
+    let last = CHIPS[0];
+    for (const bucket of DATA.buckets) {
+      if (CHIPS.includes(bucket.key)) last = bucket.key;
+      chipFor.set(bucket.key, last);
+    }
+  }
+
   function buildChips() {
+    mapChips();
     for (const key of CHIPS) {
       const bucket = DATA.buckets.find((b) => b.key === key);
       const group = DATA.entries.filter((e) => e.color === key);
@@ -249,10 +264,8 @@
       if (visible[mid].node.getBoundingClientRect().bottom > line) { found = mid; hi = mid - 1; }
       else lo = mid + 1;
     }
-    const here = found < 0 ? null : visible[found].entry.color;
+    const here = found < 0 ? null : chipFor.get(visible[found].entry.color);
     for (const button of chipsEl.children) {
-      // 칩이 없는 색(분홍·살구·흰색·회색)에 서 있으면 아무 데도 불이 안 들어온다.
-      // 엉뚱한 칩을 켜서 여기가 갈색이라고 우기는 것보다 낫다.
       const on = button.dataset.color === here;
       button.classList.toggle("on", on);
       if (on) {
