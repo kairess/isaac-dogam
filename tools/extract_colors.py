@@ -109,8 +109,57 @@ def lab(hex_color):
 
 
 def gap(one, other):
-    """두 CIELAB 색 사이의 거리."""
-    return math.dist(one, other)
+    """두 CIELAB 색이 눈에 얼마나 달라 보이는지 (CIEDE2000).
+
+    그냥 유클리드 거리(CIE76)로 재면 파랑과 진한 색에서 사람 눈과 어긋난다.
+    실제로 도감을 이 척도로 바꾸자 파랑 묶음 한복판의 큰 걸음이 사라졌다.
+    식이 길지만 표준이 그렇게 생겼다 — Sharma 검증표 16쌍으로 맞춰 두었다.
+    """
+    l1, a1, b1 = one
+    l2, a2, b2 = other
+    c1 = math.hypot(a1, b1)
+    c2 = math.hypot(a2, b2)
+    cbar = (c1 + c2) / 2
+    g = 0.5 * (1 - math.sqrt(cbar ** 7 / (cbar ** 7 + 25 ** 7))) if cbar else 0.5
+    a1p, a2p = (1 + g) * a1, (1 + g) * a2
+    c1p, c2p = math.hypot(a1p, b1), math.hypot(a2p, b2)
+    h1p = math.degrees(math.atan2(b1, a1p)) % 360 if (a1p or b1) else 0.0
+    h2p = math.degrees(math.atan2(b2, a2p)) % 360 if (a2p or b2) else 0.0
+
+    dlp = l2 - l1
+    dcp = c2p - c1p
+    if c1p * c2p == 0:
+        dhp = 0.0
+    else:
+        diff = h2p - h1p
+        if diff > 180: diff -= 360
+        elif diff < -180: diff += 360
+        dhp = diff
+    dHp = 2 * math.sqrt(c1p * c2p) * math.sin(math.radians(dhp) / 2)
+
+    lbar = (l1 + l2) / 2
+    cbarp = (c1p + c2p) / 2
+    if c1p * c2p == 0:
+        hbarp = h1p + h2p
+    else:
+        diff = abs(h1p - h2p)
+        total = h1p + h2p
+        if diff <= 180: hbarp = total / 2
+        elif total < 360: hbarp = (total + 360) / 2
+        else: hbarp = (total - 360) / 2
+
+    t = (1 - 0.17 * math.cos(math.radians(hbarp - 30))
+         + 0.24 * math.cos(math.radians(2 * hbarp))
+         + 0.32 * math.cos(math.radians(3 * hbarp + 6))
+         - 0.20 * math.cos(math.radians(4 * hbarp - 63)))
+    dtheta = 30 * math.exp(-(((hbarp - 275) / 25) ** 2))
+    rc = 2 * math.sqrt(cbarp ** 7 / (cbarp ** 7 + 25 ** 7)) if cbarp else 0.0
+    sl = 1 + (0.015 * (lbar - 50) ** 2) / math.sqrt(20 + (lbar - 50) ** 2)
+    sc = 1 + 0.045 * cbarp
+    sh = 1 + 0.015 * cbarp * t
+    rt = -math.sin(math.radians(2 * dtheta)) * rc
+    return math.sqrt((dlp / sl) ** 2 + (dcp / sc) ** 2 + (dHp / sh) ** 2
+                     + rt * (dcp / sc) * (dHp / sh))
 
 
 def achromatic_bucket(value):

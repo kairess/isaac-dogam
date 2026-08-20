@@ -178,42 +178,89 @@ def attach_gamedata(entries, report):
     return entries
 
 
+def greedy(gap, start, count):
+    """가장 가까운 색을 차례로 집어 한 줄로 잇는다. 시작점은 밖에서 정해 준다."""
+    rest = set(range(count))
+    rest.discard(start)
+    path = [start]
+    current = start
+    while rest:
+        current = min(rest, key=lambda i: gap[current][i])
+        rest.discard(current)
+        path.append(current)
+    return path
+
+
+def two_opt(gap, path, rounds=80):
+    """탐욕법이 만든 줄에서 구간을 뒤집어 총 길이를 줄인다.
+
+    탐욕법은 되돌아갈 줄 모른다. 한 무리를 훑고 다니다 다 써 버리면 멀리 남겨 둔
+    아이콘으로 순간이동해야 하고, 그 자리가 눈에 띄는 단절로 남는다. 뒤집기를
+    되풀이하면 그런 막다른 길이 풀린다. 첫 자리는 고정이라 그대로 있는다.
+    """
+    n = len(path)
+    for _ in range(rounds):
+        best, cut, join = 1e-9, -1, -1
+        for i in range(1, n - 1):
+            before, here = path[i - 1], path[i]
+            head = gap[before][here]
+            for j in range(i + 1, n):
+                tail = gap[path[j]][path[j + 1]] if j + 1 < n else 0.0
+                swapped = gap[before][path[j]] + (gap[here][path[j + 1]] if j + 1 < n else 0.0)
+                saved = head + tail - swapped
+                if saved > best:
+                    best, cut, join = saved, i, j
+        if cut < 0:
+            break
+        path[cut:join + 1] = reversed(path[cut:join + 1])
+    return path
+
+
 def order(entries):
     """색깔 묶음 순서는 그대로 두고, 묶음 안을 '색이 가장 가까운 것끼리' 이어 붙인다.
 
     묶음마다 진한 것부터 늘어놓으면 묶음이 바뀔 때마다 색이 처음으로 되돌아가서,
     쭉 내리면 열두 번 덜컹거린다. 대신 앞 아이콘과 가장 닮은 것을 차례로 집어
-    붙이면 첫 아이콘(가장 새빨간 것)부터 마지막(가장 새까만 것)까지 한 줄로 흐른다.
+    붙이고(greedy), 남은 막다른 길을 뒤집기로 풀면(two_opt) 첫 아이콘(가장 새빨간 것)
+    부터 마지막(가장 새까만 것)까지 한 줄로 흐른다.
 
     묶음은 그대로 한 덩어리라, 색깔 칩이 '그 자리로 뛰기'를 할 수 있다.
-    무채색은 이어붙이지 않고 밝은 것부터 놓는다. 흰색·회색·검정이 그대로 이어지고
-    도감의 맨 끝이 가장 어두운 아이콘이 된다.
     """
     by_color = {}
     for entry in entries:
         by_color.setdefault(entry["color"], []).append(entry)
-    lab = {id(entry): colors.lab(entry["hex"]) for entry in entries}
 
     out = []
     for key, _ko, _emoji in colors.BUCKETS:
         group = by_color.get(key)
         if not group:
             continue
-        # 시작을 고정해야 같은 자료에서 같은 결과가 나온다.
-        rest = sorted(group, key=lambda e: (e["kind"], e["id"]))
+
         if key in colors.ACHROMATIC:
-            out.extend(sorted(rest, key=lambda e: -e["value"]))
+            # 색이 없는 묶음에서 눈에 남는 건 밝기뿐이라, 이어붙이는 대신 밝은 것부터 놓는다.
+            # 밝기는 CIELAB 의 L 로 잰다. HSV 의 V 는 가장 밝은 채널 하나만 보는 값이라
+            # 사람이 느끼는 밝기와 어긋나고, 그대로 쓰면 줄이 오르내린다.
+            out.extend(sorted(group, key=lambda e: (-colors.lab(e["hex"])[0], e["kind"], e["id"])))
             continue
-        near = lambda seed: min(rest, key=lambda e: colors.gap(lab[id(seed)], lab[id(e)]))
-        # 첫 묶음의 첫 아이콘은 가장 새빨간 것으로 연다.
-        current = near(out[-1]) if out else max(rest, key=lambda e: e["weight"])
-        rest.remove(current)
-        out.append(current)
-        while rest:
-            following = near(current)
-            rest.remove(following)
-            out.append(following)
-            current = following
+
+        # 시작 상태를 고정해야 같은 자료에서 같은 결과가 나온다.
+        seq = sorted(group, key=lambda e: (e["kind"], e["id"]))
+        lab = [colors.lab(e["hex"]) for e in seq]
+        count = len(seq)
+        gap = [[0.0] * count for _ in range(count)]
+        for i in range(count):
+            for j in range(i + 1, count):
+                gap[i][j] = gap[j][i] = colors.gap(lab[i], lab[j])
+
+        if out:
+            seed = colors.lab(out[-1]["hex"])
+            start = min(range(count), key=lambda i: colors.gap(seed, lab[i]))
+        else:
+            # 첫 묶음의 첫 아이콘은 가장 새빨간 것으로 연다.
+            start = max(range(count), key=lambda i: seq[i]["weight"])
+
+        path = two_opt(gap, greedy(gap, start, count))
+        out.extend(seq[i] for i in path)
     return out
 
 
