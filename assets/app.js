@@ -335,8 +335,6 @@
     for (const one of entry.sets || []) chip(one.ko, "set");
 
     chip(`ID ${entry.id}`);
-    const bucket = DATA.buckets.find((b) => b.key === entry.color);
-    chip(`${bucket.emoji} ${bucket.ko}`);
 
     const ul = $("sheet-desc");
     ul.textContent = "";
