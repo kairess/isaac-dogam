@@ -352,6 +352,14 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   transition: background .15s ease;
 }
 .grab:hover::before { background: var(--dim); }
+/* 열릴 때 초점이 옮겨 오는 것뿐인데 테두리까지 그려지면 보기 싫다.
+   키보드로 짚어 왔을 때만, 그것도 보이는 알약에만 테를 두른다. */
+.sheet:focus { outline: none; }
+.grab:focus { outline: none; }
+.grab:focus-visible::before {
+  background: var(--dim);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 65%, transparent);
+}
 .sheet.dragging { cursor: grabbing; }
 .sheet.dragging .grab::before { background: var(--dim); }
 

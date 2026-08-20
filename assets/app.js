@@ -364,7 +364,9 @@
     backdropEl.hidden = false;
     sheetEl.scrollTop = 0;
     document.body.style.overflow = "hidden";
-    $("sheet-close").focus();
+    // 손잡이가 아니라 시트 자체에 초점을 준다. 단추에 주면 브라우저가
+    // 손잡이 자리에 커다란 네모 테두리를 그린다.
+    sheetEl.focus();
     writeHash(entry);
   }
 
