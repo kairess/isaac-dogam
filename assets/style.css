@@ -222,23 +222,6 @@ body {
 
 main { padding: 14px 12px 40px; }
 
-section {
-  margin-bottom: 22px;
-  /* 화면 밖 구간은 그리지 않게 해서 낡은 폰에서도 스크롤이 끊기지 않게 한다. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 320px;
-}
-section > h2 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 9px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--dim);
-}
-section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabular-nums; }
-
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--cell), 1fr));
@@ -256,6 +239,14 @@ section > h2 .n { color: #5c6270; font-weight: 400; font-variant-numeric: tabula
   /* 터치 목표가 최소 44px 은 되게 한다. */
   min-height: 68px;
   align-items: center;
+}
+/* 1005개가 한 판에 깔린다. 화면 밖 칸은 그리지 않아야 낡은 폰에서도 안 밀린다.
+   묶음마다 칸을 나눠 두었을 때는 구간에 걸었지만, 이제는 칸마다 걸어야 한다. */
+.grid button {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 68px;
+  /* 색깔 칩으로 뛰어왔을 때 고정 머리말 아래에서 시작하게 자리를 비워 둔다. */
+  scroll-margin-top: calc(var(--bar-h, 96px) + 10px);
 }
 .grid button:active { background: var(--panel-2); }
 .grid button:focus-visible { outline: 2px solid var(--accent); }

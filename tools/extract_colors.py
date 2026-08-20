@@ -17,6 +17,7 @@
 """
 import colorsys
 import json
+import math
 from pathlib import Path
 
 from PIL import Image
@@ -29,7 +30,7 @@ COLOR_S = 0.25       # 이보다 흐린 픽셀은 '색이 있다'고 세지 않�
 COLOR_V = 0.25       # 이보다 어두운 픽셀도 마찬가지
 MIN_SHARE = 0.18     # 아이콘의 이만큼은 덮어야 그 색으로 본다. 아니면 무채색
 BROWN_V = 0.50       # 따뜻한 색이 이보다 어두우면 갈색으로 본다
-RED_BROWN_V = 0.48   # 어둡고 탁한 빨강도 갈색으로 본다 (간, 똥, 가죽)
+RED_BROWN_V = 0.60   # 어둡고 탁한 빨강도 갈색으로 본다 (간, 녹슨 열쇠, 나무 자루)
 RED_BROWN_S = 0.70
 SKIN_S = 0.45        # 따뜻한 색이 이보다 흐리고 밝으면 살구색으로 본다
 SKIN_V = 0.55
@@ -75,7 +76,7 @@ def hue_to_bucket(hue):
     return "red"
 
 
-def sample_pixels(path):
+def sample_pixels(path, floor=OUTLINE_V):
     """아이콘에서 외곽선을 뺀 (r, g, b, h, s, v) 목록을 만든다."""
     with Image.open(path) as img:
         pixels = list(img.convert("RGBA").getdata())
@@ -84,10 +85,32 @@ def sample_pixels(path):
         if a < ALPHA_MIN:
             continue
         h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-        if v < OUTLINE_V:
+        if v < floor:
             continue
         kept.append((r, g, b, h * 360, s, v))
     return kept
+
+
+def lab(hex_color):
+    """헥스를 CIELAB 로 옮긴다. 두 색이 눈에 얼마나 달라 보이는지 재려면 이 자리가 낫다.
+
+    RGB 에서 그냥 거리를 재면 초록만 과하게 멀어진다. 도감을 색 흐름대로
+    줄 세울 때 이웃끼리 어색해 보이는 게 그 탓이다.
+    """
+    srgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
+    r, g, b = lin
+    x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.9505
+    y = r * 0.2126 + g * 0.7152 + b * 0.0722
+    z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.089
+    f = lambda t: t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+    fx, fy, fz = f(x), f(y), f(z)
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+
+def gap(one, other):
+    """두 CIELAB 색 사이의 거리."""
+    return math.dist(one, other)
 
 
 def achromatic_bucket(value):
@@ -116,7 +139,15 @@ def dominant(path):
     """
     px = sample_pixels(path)
     if not px:
-        return {"color": "gray", "hex": "#808080", "weight": 0.5, "value": 0.5}
+        # 걷어내고 나니 아무것도 안 남았다. 빈 그림이라서가 아니라 아이콘 전체가
+        # 외곽선만큼 새까매서다 (유다의 그림자, 내 그림자, 철제 옷걸이).
+        # 여기서 회색을 돌려주면 새까만 실루엣이 회색 묶음에 가서 앉는다.
+        px = sample_pixels(path, floor=0.0)
+        if not px:
+            return {"color": "gray", "hex": "#808080", "weight": 0.5, "value": 0.5}
+        value = sum(p[5] for p in px) / len(px)
+        return {"color": "black", "hex": mean_hex(px),
+                "weight": round(value, 4), "value": round(value, 4)}
 
     count = len(px)
     value = sum(p[5] for p in px) / count

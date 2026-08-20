@@ -18,9 +18,9 @@
   const QUALITY_HEX = ["#7b8291", "#5d8ac0", "#4fa06a", "#c9903a", "#e0c04a"];
 
   let DATA = null;
-  let cards = [];          // {entry, node, section} — 화면에 올려둔 카드
-  let sections = new Map(); // 색깔 -> {el, countEl, cards}
-  let state = { color: "all", kind: "all", quality: "all", query: "" };
+  let cards = [];          // {entry, node} — 화면에 올려둔 카드. 색 순서 그대로다
+  let visible = [];        // 지금 걸러내고 남은 카드. 칩 따라오기가 이걸 반씩 접어 훑는다
+  let state = { kind: "all", quality: "all", query: "" };
   let setMembers = new Map();   // 세트 이름 -> 그 세트에 드는 항목들
 
   /* ---------- 초성 검색 ----------
@@ -67,7 +67,6 @@
 
   function matches(entry) {
     if (state.kind !== "all" && entry.kind !== state.kind) return false;
-    if (state.color !== "all" && entry.color !== state.color) return false;
     if (state.quality !== "all" && String(entry.quality) !== state.quality) return false;
     const q = state.query;
     if (!q) return true;
@@ -93,42 +92,25 @@
     node.style.setProperty("--sy", Math.floor(entry.idx / cols));
   }
 
+  /* 자료는 첫 아이콘(가장 새빨간 것)부터 마지막(가장 새까만 것)까지
+     색이 이어지도록 이미 줄 세워져 있다. 그래서 묶음별로 칸을 나누지 않고
+     한 판에 쭉 깐다. 중간에 칸을 끊으면 거기서 줄이 새로 시작해 흐름이 끊긴다. */
   function build() {
-    const byColor = new Map(DATA.buckets.map((b) => [b.key, []]));
-    for (const entry of DATA.entries) byColor.get(entry.color).push(entry);
-
-    const frag = document.createDocumentFragment();
-    for (const bucket of DATA.buckets) {
-      const group = byColor.get(bucket.key);
-      if (!group.length) continue;
-
-      const section = document.createElement("section");
-      section.dataset.color = bucket.key;
-      const heading = document.createElement("h2");
-      heading.innerHTML = `${bucket.emoji} ${bucket.ko} <span class="n"></span>`;
-      const grid = document.createElement("div");
-      grid.className = "grid";
-
-      const nodes = [];
-      for (const entry of group) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.title = entry.ko;
-        const icon = document.createElement("span");
-        icon.className = "icon";
-        placeIcon(icon, entry);
-        button.append(icon);
-        button.addEventListener("click", () => open(entry));
-        grid.append(button);
-        nodes.push(button);
-        cards.push({ entry, node: button });
-      }
-
-      section.append(heading, grid);
-      frag.append(section);
-      sections.set(bucket.key, { el: section, countEl: heading.querySelector(".n"), nodes, group });
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    for (const entry of DATA.entries) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.title = entry.ko;
+      const icon = document.createElement("span");
+      icon.className = "icon";
+      placeIcon(icon, entry);
+      button.append(icon);
+      button.addEventListener("click", () => open(entry));
+      grid.append(button);
+      cards.push({ entry, node: button });
     }
-    listEl.append(frag);
+    listEl.append(grid);
   }
 
   function buildChips() {
@@ -143,7 +125,7 @@
       button.innerHTML =
         (dot ? `<span class="dot" style="background:${dot}"></span>` : "") +
         `${label}<span class="n">${count}</span>`;
-      button.addEventListener("click", () => setColor(key));
+      button.addEventListener("click", () => jumpTo(key));
       chipsEl.append(button);
     };
     make("all", "전체", "", DATA.entries.length);
@@ -198,22 +180,15 @@
   /* ---------- 걸러내기 ---------- */
 
   function apply() {
-    let shown = 0;
-    for (const { entry, node } of cards) {
-      const ok = matches(entry);
-      node.hidden = !ok;
-      if (ok) shown++;
+    visible = [];
+    for (const card of cards) {
+      const ok = matches(card.entry);
+      card.node.hidden = !ok;
+      if (ok) visible.push(card);
     }
-    for (const [key, section] of sections) {
-      const visible = section.nodes.reduce((n, node) => n + (node.hidden ? 0 : 1), 0);
-      section.el.hidden = visible === 0;
-      section.countEl.textContent = visible;
-    }
-    emptyEl.hidden = shown > 0;
+    emptyEl.hidden = visible.length > 0;
+    spy();
 
-    for (const button of chipsEl.children) {
-      button.classList.toggle("on", button.dataset.color === state.color);
-    }
     for (const button of $("quals").children) {
       button.classList.toggle("on", button.dataset.quality === state.quality);
     }
@@ -225,12 +200,85 @@
     clearEl.hidden = !state.query;
   }
 
-  function setColor(key) {
-    state.color = key;
-    apply();
-    writeHash();
-    // 고른 색 구간이 화면 위로 오게 한다. 칩만 눌러도 바로 보이도록.
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  /* ---------- 색깔 칩: 그 자리로 뛰기 ----------
+     아이콘이 색 순서로 한 줄에 이어져 있으니, 색깔은 걸러낼 갈래가 아니라
+     띠 위의 위치다. 그래서 칩은 걸러내지 않고 그 자리로 데려다 준다. */
+
+  const barEl = document.querySelector(".bar");
+
+  function barHeight() {
+    return barEl.getBoundingClientRect().height;
+  }
+
+  /* 고정된 머리말 높이는 검색줄이 접히고 펴짐에 따라 달라진다. 그 값을 CSS 에 넘겨
+     두면 scroll-margin-top 이 알아서 자리를 비워, 뛰어간 아이콘이 머리말에 가리지 않는다. */
+  function measureBar() {
+    document.documentElement.style.setProperty("--bar-h", `${Math.round(barHeight())}px`);
+  }
+
+  /* 부드럽게 밀지 않고 바로 옮긴다. 검정까지는 만 오천 픽셀이 넘어서,
+     그 거리를 애니메이션으로 흘리면 몇 초를 기다려야 하고 눈도 어지럽다.
+     대신 칩에 불이 들어와 지금 어느 색에 서 있는지 알려 준다. */
+  function jumpTo(key) {
+    if (key === "all") {
+      window.scrollTo(0, 0);
+      spy();
+      return;
+    }
+    // 검색이나 종류로 걸러 둔 상태면 남아 있는 것 중 첫째로 간다.
+    const first = visible.find((card) => card.entry.color === key);
+    if (!first) return;
+    /* 자리를 직접 계산해 옮기면 안 된다. 화면 밖 칸은 아직 안 그려서 높이를
+       어림잡아 두고 있어(content-visibility), 옮기고 나면 그 어림값이 실제 값으로
+       바뀌면서 목표가 발밑에서 움직인다. scrollIntoView 는 브라우저가 그 칸을
+       먼저 그려 놓고 옮겨 주므로 어긋나지 않는다. */
+    measureBar();
+    first.node.scrollIntoView({ block: "start" });
+    spy();
+  }
+
+  /* 지금 화면 맨 위에 걸린 아이콘이 어느 색인지 칩에 표시한다.
+     묶음 제목을 없앤 대신 이 칩이 '지금 어디쯤인지'를 알려 준다. */
+  let spying = 0;
+
+  function spy() {
+    /* 한 줄에 다섯 칸이라 색이 바뀌는 자리는 줄 한가운데에 걸린다. 맨 윗줄로 재면
+       파랑으로 뛰어왔는데도 그 줄 왼쪽에 남은 초록이 잡힌다. 화면 3분의 1쯤
+       내려온 자리로 재면 지금 보고 있는 색이 제대로 잡힌다. */
+    const top = barHeight();
+    const line = top + (window.innerHeight - top) * 0.35;
+    // 남아 있는 카드는 문서 순서 그대로라 위에서 아래로 정렬돼 있다.
+    // 1005개를 매 프레임 재면 스크롤이 밀리니 반씩 접어 가며 찾는다.
+    let lo = 0, hi = visible.length - 1, found = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (visible[mid].node.getBoundingClientRect().bottom > line) { found = mid; hi = mid - 1; }
+      else lo = mid + 1;
+    }
+    const here = found < 0 ? null : visible[found].entry.color;
+    for (const button of chipsEl.children) {
+      const on = button.dataset.color === (here || "all");
+      button.classList.toggle("on", on);
+      if (on && button.dataset.color !== "all") {
+        // 칩 줄도 가로로 따라 움직여야 지금 색이 눈에 보인다.
+        const box = chipsEl.getBoundingClientRect();
+        const chip = button.getBoundingClientRect();
+        if (chip.left < box.left + 8 || chip.right > box.right - 8) {
+          chipsEl.scrollTo({
+            left: button.offsetLeft - chipsEl.clientWidth / 2 + button.offsetWidth / 2,
+            behavior: "smooth",
+          });
+        }
+      }
+    }
+  }
+
+  /* 스크롤마다 다시 재면 손가락이 밀린다. 100ms 에 한 번이면 칩이 따라오는 데 충분하다.
+     requestAnimationFrame 이 아니라 시계를 쓰는 건, 화면이 안 보이는 동안
+     rAF 가 멈춰 서서 표시가 옛날 색에 걸린 채 남는 일이 없게 하려는 것이다. */
+  function spySoon() {
+    if (spying) return;
+    spying = setTimeout(() => { spying = 0; spy(); }, 100);
   }
 
   /* ---------- 상세 시트 ---------- */
@@ -474,10 +522,7 @@
   let ignoreHash = false;
 
   function writeHash(entry) {
-    const parts = [];
-    if (entry) parts.push(`i=${entry.kind}:${entry.id}`);
-    else if (state.color !== "all") parts.push(`c=${state.color}`);
-    const hash = parts.length ? `#${parts.join("&")}` : " ";
+    const hash = entry ? `#i=${entry.kind}:${entry.id}` : " ";
     ignoreHash = true;
     if (entry) history.pushState(null, "", hash);
     else history.replaceState(null, "", hash);
@@ -494,11 +539,6 @@
       if (entry) { open(entry); return; }
     }
     close();
-    const color = params.get("c");
-    if (color && (color === "all" || DATA.buckets.some((b) => b.key === color))) {
-      state.color = color;
-      apply();
-    }
   }
 
   /* ---------- 이벤트 ---------- */
@@ -549,6 +589,9 @@
       }
     });
     window.addEventListener("hashchange", readHash);
+    window.addEventListener("scroll", spySoon, { passive: true });
+    window.addEventListener("resize", () => { measureBar(); spySoon(); }, { passive: true });
+    measureBar();
   }
 
   /* ---------- 시작 ---------- */

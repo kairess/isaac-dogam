@@ -35,7 +35,6 @@ REPORT = ROOT / "_report"
 
 CELL = 64      # 아이템 아이콘 원본 크기. 장신구(32px)는 2배로 키워 맞춘다.
 COLS = 30      # 스프라이트 시트 가로 칸 수
-BUCKET_ORDER = {key: i for i, (key, _ko, _emoji) in enumerate(colors.BUCKETS)}
 
 
 def normalize(name):
@@ -179,6 +178,45 @@ def attach_gamedata(entries, report):
     return entries
 
 
+def order(entries):
+    """색깔 묶음 순서는 그대로 두고, 묶음 안을 '색이 가장 가까운 것끼리' 이어 붙인다.
+
+    묶음마다 진한 것부터 늘어놓으면 묶음이 바뀔 때마다 색이 처음으로 되돌아가서,
+    쭉 내리면 열두 번 덜컹거린다. 대신 앞 아이콘과 가장 닮은 것을 차례로 집어
+    붙이면 첫 아이콘(가장 새빨간 것)부터 마지막(가장 새까만 것)까지 한 줄로 흐른다.
+
+    묶음은 그대로 한 덩어리라, 색깔 칩이 '그 자리로 뛰기'를 할 수 있다.
+    무채색은 이어붙이지 않고 밝은 것부터 놓는다. 흰색·회색·검정이 그대로 이어지고
+    도감의 맨 끝이 가장 어두운 아이콘이 된다.
+    """
+    by_color = {}
+    for entry in entries:
+        by_color.setdefault(entry["color"], []).append(entry)
+    lab = {id(entry): colors.lab(entry["hex"]) for entry in entries}
+
+    out = []
+    for key, _ko, _emoji in colors.BUCKETS:
+        group = by_color.get(key)
+        if not group:
+            continue
+        # 시작을 고정해야 같은 자료에서 같은 결과가 나온다.
+        rest = sorted(group, key=lambda e: (e["kind"], e["id"]))
+        if key in colors.ACHROMATIC:
+            out.extend(sorted(rest, key=lambda e: -e["value"]))
+            continue
+        near = lambda seed: min(rest, key=lambda e: colors.gap(lab[id(seed)], lab[id(e)]))
+        # 첫 묶음의 첫 아이콘은 가장 새빨간 것으로 연다.
+        current = near(out[-1]) if out else max(rest, key=lambda e: e["weight"])
+        rest.remove(current)
+        out.append(current)
+        while rest:
+            following = near(current)
+            rest.remove(following)
+            out.append(following)
+            current = following
+    return out
+
+
 def write_sprite(entries):
     """아이콘을 한 장으로 합친다. 요청 한 번이면 909개가 다 뜬다."""
     rows = (len(entries) + COLS - 1) // COLS
@@ -222,7 +260,7 @@ def write_app_icons():
 def write_report(entries):
     REPORT.mkdir(exist_ok=True)
     by_bucket = {key: [] for key, _ko, _emoji in colors.BUCKETS}
-    for entry in entries:
+    for entry in entries:   # entries 는 이미 최종 순서다
         by_bucket[entry["color"]].append(entry)
 
     parts = [
@@ -235,14 +273,13 @@ def write_report(entries):
         "figcaption{font-size:10px;color:#aaa;word-break:keep-all;line-height:1.2;margin-top:3px}"
         "p.hint{color:#9aa;max-width:60em}</style>",
         "<h1>색상 분류 검수</h1>",
-        "<p class='hint'>묶음 안은 <b>그 색이 짙은 것부터</b> 늘어놓았습니다 "
-        "(아래 숫자가 비중). 뒤로 갈수록 색이 옅어지는 건 정상이고, "
-        "눈에 보이는 색과 아예 다르게 묶인 아이콘을 찾아 "
+        "<p class='hint'>묶음 안은 <b>색이 가장 가까운 것끼리</b> 이어 붙였습니다 "
+        "(아래 숫자는 그 색의 비중). 눈에 보이는 색과 아예 다르게 묶인 아이콘을 찾아 "
         "<code>tools/color_overrides.json</code> 에 <code>\"item:105\": \"red\"</code> 형태로 적고 "
         "<code>python3 tools/build.py</code> 를 다시 실행하세요.</p>",
     ]
     for key, ko, emoji in colors.BUCKETS:
-        group = sorted(by_bucket[key], key=lambda e: -e["weight"])
+        group = by_bucket[key]   # 이미 이어붙인 순서다
         parts.append(f"<h2>{emoji} {ko} ({len(group)})</h2><div class='grid'>")
         for entry in group:
             rel = Path("..") / entry["path"].relative_to(ROOT)
@@ -274,9 +311,7 @@ def main():
     print("[3/5] 대표 색상 추출 · 등급 · 등장 장소")
     entries = classify(entries, report)
     entries = attach_gamedata(entries, report)
-    # 색깔 묶음 순서 -> 묶음 안에서는 그 색이 짙은 것부터. 온통 빨간 아이콘이 앞에 서고
-    # 빨간 점만 몇 개 찍힌 아이콘이 뒤로 밀린다. 마지막 검정 묶음 끝이 가장 어둡다.
-    entries.sort(key=lambda e: (BUCKET_ORDER[e["color"]], -e["weight"], e["kind"], e["id"]))
+    entries = order(entries)
 
     print("[4/5] 스프라이트 시트")
     sprite_path, sprite_size = write_sprite(entries)
