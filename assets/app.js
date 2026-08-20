@@ -581,9 +581,95 @@
         `<code>python3 tools/build.py</code> 를 실행했는지 확인해 주세요.</p>`;
     });
 
+  /* ---------- 새 판 알림 ----------
+     오프라인으로도 열리게 캐시를 깔아 둔 대가로, 아이템을 고치고 올려도
+     이미 다녀간 기기는 예전 걸 계속 본다. 서버의 sw.js 에 적힌 판 번호와
+     지금 물고 있는 번호가 다르면 제목 옆에 빨간 동그라미를 띄운다.
+     누르면 캐시를 비우고 새로 받는다. */
+
+  function watchVersion() {
+    if (!("serviceWorker" in navigator)) return;
+    const badge = $("fresh");
+    if (!badge) return;
+
+    let busy = false;
+    // 첫 방문에는 워커가 페이지를 넘겨받으면서 controllerchange 가 한 번 뜬다.
+    // 그건 새 판이 아니라 그냥 설치다.
+    const hadWorker = !!navigator.serviceWorker.controller;
+
+    function show() {
+      if (busy) return;
+      badge.hidden = false;
+    }
+
+    // 지금 페이지를 먹여 살리고 있는 워커에게 판 번호를 물어본다.
+    function askWorker() {
+      return new Promise((resolve) => {
+        const worker = navigator.serviceWorker.controller;
+        if (!worker) { resolve(null); return; }
+        const channel = new MessageChannel();
+        const giveUp = setTimeout(() => resolve(null), 2000);
+        channel.port1.onmessage = (event) => {
+          clearTimeout(giveUp);
+          resolve(event.data && event.data.version);
+        };
+        worker.postMessage({ type: "version" }, [channel.port2]);
+      });
+    }
+
+    async function check() {
+      if (busy || !navigator.onLine || !badge.hidden) return;
+      try {
+        // 캐시를 건너뛰고 서버 것을 그대로 읽어야 판 번호를 견줄 수 있다.
+        const response = await fetch("sw.js", { cache: "no-store" });
+        if (!response.ok) return;
+        const latest = (/VERSION\s*=\s*"([^"]+)"/.exec(await response.text()) || [])[1];
+        const mine = await askWorker();
+        if (latest && mine && latest !== mine) show();
+      } catch (_) { /* 통신이 안 되면 다음 기회에 */ }
+    }
+
+    async function refresh() {
+      if (busy) return;
+      if (!navigator.onLine) {
+        // 캐시를 지웠는데 새로 받을 수 없으면 빈 화면만 남는다.
+        badge.textContent = "!";
+        badge.setAttribute("aria-label", "지금은 통신이 안 됩니다. 연결된 뒤에 눌러 주세요.");
+        setTimeout(() => {
+          badge.textContent = "N";
+          badge.setAttribute("aria-label", "새 판이 나왔습니다. 눌러서 받기");
+        }, 2000);
+        return;
+      }
+      busy = true;
+      badge.disabled = true;
+      badge.textContent = "…";
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) await registration.unregister();
+      } catch (_) { /* 못 지워도 새로고침은 해 본다 */ }
+      location.reload();
+    }
+
+    badge.addEventListener("click", refresh);
+
+    // 뒤에서 워커가 조용히 새 판으로 갈아탄 경우. 화면의 코드는 아직 예전 것이다.
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadWorker) show();
+    });
+
+    check();
+    // 게임하다 다시 들여다볼 때마다 한 번씩 확인한다. 켜 둔 채로 며칠 지나도 놓치지 않게.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) check();
+    });
+  }
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+      navigator.serviceWorker.register("sw.js").then(watchVersion).catch(() => {});
     });
   }
 })();

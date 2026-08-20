@@ -70,6 +70,25 @@ body {
 }
 .bar h1 b { color: var(--text); font-weight: 700; }
 
+/* 새 판이 올라왔을 때만 제목 옆에 붙는 빨간 동그라미. 누르면 캐시를 비우고 새로 받는다. */
+.fresh {
+  vertical-align: super;
+  margin-left: 7px;
+  width: 17px; height: 17px;
+  border: 0; padding: 0;
+  border-radius: 50%;
+  background: #e5484d;
+  color: #fff;
+  font: 700 10px/17px inherit;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #e5484d 22%, transparent);
+  animation: pop .3s cubic-bezier(.2, 1.4, .4, 1);
+}
+.fresh:disabled { opacity: .55; cursor: default; animation: none; }
+@keyframes pop { from { transform: scale(0); } }
+@media (prefers-reduced-motion: reduce) { .fresh { animation: none; } }
+
 .seg {
   display: flex;
   background: var(--panel-2);

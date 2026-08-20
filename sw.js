@@ -2,7 +2,7 @@
    설치할 때 필요한 파일을 통째로 받아두고, 그 다음부터는 캐시부터 본다. */
 
 // 파일을 고칠 때마다 올린다. 올리지 않으면 이미 방문한 기기가 예전 파일을 계속 쓴다.
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = `isaac-items-${VERSION}`;
 const ASSETS = [
   "./",
@@ -28,6 +28,15 @@ self.addEventListener("activate", (event) => {
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+/* 화면 쪽에서 "지금 물고 있는 판이 몇 번이냐"고 물어보면 답해 준다.
+   그 답과 서버의 sw.js 를 견줘 새 판이 나왔는지 알아낸다. */
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "version") return;
+  const reply = { type: "version", version: VERSION };
+  if (event.ports && event.ports[0]) event.ports[0].postMessage(reply);
+  else if (event.source) event.source.postMessage(reply);
 });
 
 self.addEventListener("fetch", (event) => {
