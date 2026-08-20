@@ -114,9 +114,11 @@
   }
 
   /* 칩으로 내보내는 색. 자료는 열두 갈래로 나누지만 띠 위에 세울 이정표는
-     무지개와 갈색·검정이면 넉넉하다. 분홍·살구·흰색·회색은 이 사이사이에
-     그대로 놓여 있고, 내려가다 보면 만나게 된다. */
-  const CHIPS = ["red", "orange", "yellow", "green", "blue", "purple", "brown", "black"];
+     이만큼이면 넉넉하다. 흰색은 153개나 되는데다 갈색과 검정 사이가 너무 멀어
+     따로 세워 둔다. 분홍·살구·회색은 이 사이사이에 그대로 놓여 있고,
+     내려가다 보면 만나게 된다. */
+  const CHIPS = ["red", "orange", "yellow", "green", "blue", "purple",
+                 "brown", "white", "black"];
 
   function buildChips() {
     for (const key of CHIPS) {
